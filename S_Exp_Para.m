@@ -1,4 +1,4 @@
-function P = S_ExP_Para()
+function P = S_Exp_Para()
 
 P.number_orientations=2;
 P.prior_task=[0 1];
