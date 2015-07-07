@@ -1,4 +1,4 @@
-function out = S_Experiment_edited(P)
+function out = S_Experiment(P)
 
 % P.fct:
 % 2x2: two locations, two orientations (NIPS)
@@ -56,21 +56,21 @@ else task='discrimination'; end
           error('n_zero_signal>=n_frames!');
         end
     end
-     zs=I.n_zero_signal+1; 
-     ns=n_samples; 
-     spe=P.number_samples_per_evidence;
+    %zs=I.n_zero_signal+1;
+    %ns=n_samples;
+    %spe=P.number_samples_per_evidence;
     I.n_frames=numel(unique(S.access));
-    if min(abs(P.stimulus_contrast))>0 && P.P.prior_task(1)<P.P.prior_task(2)
+    if max(abs(P.stimulus_contrast))>0 && P.P.prior_task(1)<P.P.prior_task(2)
       warning('non-zero stim contrasts imply Task=1, not 2!!');
     end
     % Sanity checks
     if P.kappa_O(2)>=P.kappa_O(1), warning('are you sure about P.kappa?'); end
     % Repeating Gibbs sampling P.number_repetitions times
     out.X=zeros(P.number_repetitions,P.number_locations*P.dimension_X, n_samples);
+    % the below two lines are my way of dealing with Matlab's lack of
+    % macros. use comments to switch between serial and parallel processing
     %parfor i=1:P.number_repetitions
-    warning('serial!!'); 
-    parfor i=1:P.number_repetitions, 
-      ProgressReport(10,i-1,P.number_repetitions);
+    warning('serial!!'); for i=1:P.number_repetitions, ProgressReport(10,i-1,P.number_repetitions);
       if mod(i,20)==0
         disp(['Computing Repetition ' num2str(i) ' / ' num2str(P.number_repetitions)]);
       end

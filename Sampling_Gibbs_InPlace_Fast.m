@@ -1,4 +1,4 @@
-function [X G O L Style Task] = Sampling_Gibbs_InPlace_Fast_e(P,Input,NSamples,varargin)
+function [X G O L Style Task] = Sampling_Gibbs_InPlace_Fast(P,Input,NSamples,varargin)
 
 % created as fast version of original Sampling_Gibbs_InPlace
 % incorporates S_ConditionalProbs (or at least 'tau' and 'pO_...'
@@ -38,7 +38,7 @@ kernel_G=zeros(P.dimension_G,P.dimension_X);
 C=1/besseli(0,P.kappa_G);
 for i=1:P.dimension_G
   for j=1:P.dimension_X
-    kernel_G(i,j)=P.tau/P.dimension_X*(C*exp(P.kappa_G*cos(2*(P.phi_x(j)-P.phi_g(i)))));
+    kernel_G(i,j)=P.delta/P.dimension_X*(C*exp(P.kappa_G*cos(2*(P.phi_x(j)-P.phi_g(i)))));
   end
 end
 % check for worst case scenario
@@ -69,8 +69,9 @@ X=zeros(NX,NSamples); %
 G=zeros(P.number_locations,P.dimension_G,NSamples);
 Style=zeros(1,NSamples);
 L=zeros(   1,NSamples);
+Style(1)=1; % start with Olshausen & Field
 %Style(1)=gamrnd(P.paraStyle(1),P.paraStyle(2),1); disp('Style ~ Gamma!');
-Style(1)=exprnd(P.tauStyle,1); %disp('Style ~ Exp!');
+%Style(1)=exprnd(P.tauStyle,1); %disp('Style ~ Exp!');
 L(1)=find(cumsum(pL)>rand(1),1,'first');
 O=zeros(1,NSamples); % 1st: sample, 2nd: ratio 2/1
 O(1)=find(mnrnd(1,pO)==1,1); %1+binornd(1,pO(2));
