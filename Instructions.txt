@@ -1,0 +1,23 @@
+RUNNING AN EXPERIMENT
+----------------------------------------------------------
+
+TO RUN IN TERMINAL (recommended):
+1.  From the command line, run the command 'matlab -nodesktop -nosplash'
+2.  Navigate to the directory where the code is once in the matlab environment
+3.  Run the Matlab command S_Experiment(S_Exp_Para('paper-2AFC-corr')). It should output a variable named ans.
+4. To save the result, use the save(FILENAME) command to save the ans variable to a .mat file
+
+
+TO RUN IN MATLAB:
+1. Open Matlab and navigate to the appropriate directory
+2. Run the command S_Experiment(S_Exp_Para('paper-2AFC-corr')) in the GUI's command line.
+3. Once done, save the output in the same manner as above. 
+
+TO RUN ON A REMOTE MACHINE
+1. Using ssh or a remote desktop client, access the machine you wish to run the code on. 
+2. If your machine supports parallelization for MATLAB, switch to a parfor in S_Experiment(). Comment out the standard for loop. If you are running code serially, skip step 4. 
+3. Open a terminal MATLAB session as instructed above in the first section. 
+4. Enter the command 'parpool' to set up a default worker pool. To control the nubmer of workers, enter 'parpool(NUMBER)' instead. 
+5. Run the Matlab command S_Experiment(S_Exp_Para('paper-2AFC-corr')). It should output a variable named ans.
+6. To save the result, use the save(FILENAME) command to save the ans variable to a .mat file
+7. Download the .mat file to your local machine via ssh or ftp. (Cyberduck is an easy to use GUI application for ftp and sftp transfers if you prefer not to use the terminal)
