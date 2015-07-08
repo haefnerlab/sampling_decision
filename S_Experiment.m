@@ -69,8 +69,8 @@ else task='discrimination'; end
     out.X=zeros(P.number_repetitions,P.number_locations*P.dimension_X, n_samples);
     % the below two lines are my way of dealing with Matlab's lack of
     % macros. use comments to switch between serial and parallel processing
-    %parfor i=1:P.number_repetitions
-    warning('serial!!'); for i=1:P.number_repetitions, ProgressReport(10,i-1,P.number_repetitions);
+    parfor i=1:P.number_repetitions,
+    %warning('serial!!'); for i=1:P.number_repetitions, ProgressReport(10,i-1,P.number_repetitions);
       if mod(i,20)==0
         disp(['Computing Repetition ' num2str(i) ' / ' num2str(P.number_repetitions)]);
       end
@@ -103,7 +103,7 @@ else task='discrimination'; end
       
       %Perform a trial 
       [aux_X{i} aux_G{i} aux_O{i} aux_L{i} aux_S{i} aux_T{i}]=...
-        Sampling_Gibbs_InPlace_Fast_e(P,Y,n_samples,S.access,I.n_zero_signal);
+        Sampling_Gibbs_InPlace_Fast(P,Y,n_samples,S.access,I.n_zero_signal);
      for j=1:P.dimension_X*P.number_locations
         switch P.stimulus_regime
           case {'static','blank'}
