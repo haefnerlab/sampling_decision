@@ -12,7 +12,7 @@ switch mode
     P.delta=5; % ??
     P.stimulus_regime='static';
     P.stimulus_contrast=zeros(1,P.number_orientations);
-    P.number_repetitions=10; % number of trials
+    P.number_repetitions=5; % number of trials
     P.number_burn_in=0; % number of burn-in samPles
     P.number_samples_to_use=100; %Number  of non-burn samples to be used for evidence
     P.number_samples_per_evidence=5;

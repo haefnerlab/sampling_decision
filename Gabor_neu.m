@@ -21,7 +21,6 @@ else
 
   if isempty(sigma)
     sigma=1;
-    disp('Gabor_neu: sigma set to 1!');
   end
 
   switch ana

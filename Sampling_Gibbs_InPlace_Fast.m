@@ -1,4 +1,4 @@
-function [X G O L Style Task] = Sampling_Gibbs_InPlace_Fast(P,Input,NSamples,varargin)
+function [X G O L Style Task] = Sampling_Gibbs_InPlace_Fast(P,Input,access, n_zero_signal)
 
 % created as fast version of original Sampling_Gibbs_InPlace
 % incorporates S_ConditionalProbs (or at least 'tau' and 'pO_...'
@@ -6,13 +6,6 @@ function [X G O L Style Task] = Sampling_Gibbs_InPlace_Fast(P,Input,NSamples,var
 DEBUG=0;
 
 sigy=1;
-
-[access n_zero_signal]=Get_Varargin(varargin);
-if isempty(access), access=ones(1,NSamples); end
-if isempty(n_zero_signal), n_zero_signal=0; end
-% access determines which frames to use in the input
-% ones means always the first frame
-% 1:NSamples means a different one every time (dynamic random dots)
 
 nI=size(Input);
 switch length(nI)
@@ -65,22 +58,22 @@ kernel_O(kernel_O>1)=1;
 
 % initialization of samples
 pO=P.pO; pL=P.pL; prior_task=P.prior_task;
-X=zeros(NX,NSamples); %
-G=zeros(P.number_locations,P.dimension_G,NSamples);
-Style=zeros(1,NSamples);
-L=zeros(   1,NSamples);
+X=zeros(NX,P.n_samples); %
+G=zeros(P.number_locations,P.dimension_G,P.n_samples);
+Style=zeros(1,P.n_samples);
+L=zeros(   1,P.n_samples);
 Style(1)=1; % start with Olshausen & Field
 %Style(1)=gamrnd(P.paraStyle(1),P.paraStyle(2),1); disp('Style ~ Gamma!');
 %Style(1)=exprnd(P.tauStyle,1); %disp('Style ~ Exp!');
 L(1)=find(cumsum(pL)>rand(1),1,'first');
-O=zeros(1,NSamples); % 1st: sample, 2nd: ratio 2/1
+O=zeros(1,P.n_samples); % 1st: sample, 2nd: ratio 2/1
 O(1)=find(mnrnd(1,pO)==1,1); %1+binornd(1,pO(2));
-pO_Posterior=zeros(P.number_orientations,NSamples);
+pO_Posterior=zeros(P.number_orientations,P.n_samples);
 pO_Posterior(:,1)=pO;
-Task =zeros(1,NSamples); % 1st: sample, 2nd: ratio 2/1
-prior_task_Posterior=zeros(P.nT,NSamples);
+Task =zeros(1,P.n_samples); % 1st: sample, 2nd: ratio 2/1
+prior_task_Posterior=zeros(P.nT,P.n_samples);
 prior_task_Posterior(:,1)=prior_task;
-pL_Posterior=zeros(P.number_locations,NSamples);
+pL_Posterior=zeros(P.number_locations,P.n_samples);
 pL_Posterior(:,1)=pL;
 Task(1)=find(mnrnd(1,prior_task)==1,1); %1+binornd(1,prior_task(2));
 %S_ConditionalProbs('init',P); % initializing kernel lookup tables
@@ -101,7 +94,7 @@ for k=1:NX % current X to be sampled, order doesn't make a difference!
 end
 % Gibbs sampling ---------------------------------------------------------
 
-for i=2:NSamples
+for i=2:P.n_samples
   % Copy entire current state forward by 1 step
   X(:,i)=X(:,i-1);
   G(:,:,i)=G(:,:,i-1);

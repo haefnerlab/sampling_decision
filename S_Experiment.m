@@ -1,5 +1,5 @@
-function out = S_Experiment(P)
-
+function out = S_Experiment()
+P = S_Exp_Para('paper-2AFC-corr');
 % P.fct:
 % 2x2: two locations, two orientations (NIPS)
 % 1xN: 1 location, many orientations
@@ -23,7 +23,7 @@ else task='discrimination'; end
     P.ny=p.ny;
     
     % Sampling setup
-    n_samples=P.number_burn_in+P.number_samples_to_use;
+    P.n_samples=P.number_burn_in+P.number_samples_to_use;
     
     % Input
     I.fct='nx2';
@@ -31,25 +31,25 @@ else task='discrimination'; end
     switch P.stimulus_regime
       case {'static','blank'}
         I.n_frames=1;
-        S.access=ones(1,n_samples);
+        S.access=ones(1,P.n_samples);
       case 'static-delayed'
         I.n_frames=2;
-        S.access=ones(1,n_samples);
+        S.access=ones(1,P.n_samples);
         S.access(I.n_zero_signal+1:end)=2;
       case 'dynamic-delayed'
-        I.n_frames=n_samples;
+        I.n_frames=P.n_samples;
         if I.n_zero_signal>=I.n_frames
           error('n_zero_signal>=n_frames!');
         end
-        S.access=1:n_samples;
+        S.access=1:P.n_samples;
       case 'dynamic-switching-signal'
         I.n_frames=n_samples;
         if I.n_zero_signal>=I.n_frames
           error('n_zero_signal>=n_frames!');
         end
-        S.access=1:n_samples;
+        S.access=1:P.n_samples;
       case 'dynamic-switching-signal-blocked'
-        zs=I.n_zero_signal+1; ns=n_samples; spe=P.number_samples_per_evidence;
+        zs=I.n_zero_signal+1; ns=P.n_samples; spe=P.number_samples_per_evidence;
         S.access=[1:zs zs+ceil((1:ns-zs)/spe)];
         I.n_frames=numel(unique(S.access));
         if I.n_zero_signal>=I.n_frames
@@ -57,7 +57,7 @@ else task='discrimination'; end
         end
     end
     %zs=I.n_zero_signal+1;
-    %ns=n_samples;
+    %ns=P.n_samples;
     %spe=P.number_samples_per_evidence;
     I.n_frames=numel(unique(S.access));
     if max(abs(P.stimulus_contrast))>0 && P.P.prior_task(1)<P.P.prior_task(2)
@@ -65,12 +65,15 @@ else task='discrimination'; end
     end
     % Sanity checks
     if P.kappa_O(2)>=P.kappa_O(1), warning('are you sure about P.kappa?'); end
+
     % Repeating Gibbs sampling P.number_repetitions times
-    out.X=zeros(P.number_repetitions,P.number_locations*P.dimension_X, n_samples);
+    out.X=zeros(P.number_repetitions,P.number_locations*P.dimension_X, P.n_samples);
+
     % the below two lines are my way of dealing with Matlab's lack of
     % macros. use comments to switch between serial and parallel processing
-    parfor i=1:P.number_repetitions,
-    %warning('serial!!'); for i=1:P.number_repetitions, ProgressReport(10,i-1,P.number_repetitions);
+    %PARALLEL SUPPORT
+    %parfor i=1:P.number_repetitions,
+    warning('serial!!'); for i=1:P.number_repetitions, ProgressReport(10,i-1,P.number_repetitions);
       if mod(i,20)==0
         disp(['Computing Repetition ' num2str(i) ' / ' num2str(P.number_repetitions)]);
       end
@@ -103,7 +106,8 @@ else task='discrimination'; end
       
       %Perform a trial 
       [aux_X{i} aux_G{i} aux_O{i} aux_L{i} aux_S{i} aux_T{i}]=...
-        Sampling_Gibbs_InPlace_Fast(P,Y,n_samples,S.access,I.n_zero_signal);
+        Sampling_Gibbs_InPlace_Fast(P,Y,S.access,I.n_zero_signal);
+
      for j=1:P.dimension_X*P.number_locations
         switch P.stimulus_regime
           case {'static','blank'}
