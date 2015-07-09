@@ -27,7 +27,7 @@ else task='discrimination'; end
     
     % Input
     I.fct='nx2';
-    I.n_zero_signal=20; % sometimes 50. Why?
+    I.n_zero_signal=P.n_zero_signal;
     switch P.stimulus_regime
       case {'static','blank'}
         I.n_frames=1;
@@ -69,7 +69,11 @@ else task='discrimination'; end
     out.X=zeros(P.number_repetitions,P.number_locations*P.dimension_X, n_samples);
     % the below two lines are my way of dealing with Matlab's lack of
     % macros. use comments to switch between serial and parallel processing
+<<<<<<< Updated upstream
     parfor i=1:P.number_repetitions,
+=======
+    parfor i=1:P.number_repetitions
+>>>>>>> Stashed changes
     %warning('serial!!'); for i=1:P.number_repetitions, ProgressReport(10,i-1,P.number_repetitions);
       if mod(i,20)==0
         disp(['Computing Repetition ' num2str(i) ' / ' num2str(P.number_repetitions)]);
