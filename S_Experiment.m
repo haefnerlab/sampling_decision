@@ -143,4 +143,5 @@ else task='discrimination'; end
       end
     end
     out.Projection=P; out.InputImage=I; out.Sampling=S;
+    out = BackwardsComp(out);
 end

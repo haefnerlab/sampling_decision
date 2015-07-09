@@ -7,6 +7,10 @@ DEBUG=0;
 
 sigy=1;
 
+
+% access determines which frames to use in the input
+
+
 nI=size(Input);
 switch length(nI)
   case 2

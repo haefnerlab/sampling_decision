@@ -5,8 +5,8 @@ switch mode
     P.number_orientations=2;
     P.prior_task=[0 1]; % [cardinal, oblique]
     P.number_locations=1;
-    P.dimension_X=1024;
-    P.dimension_G=256;
+    P.dimension_X=10;
+    P.dimension_G=4;
     P.kappa_O=[1 0]; % attended and unattended
     P.kappa_G=3;
     P.delta=5; % ??
