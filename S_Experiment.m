@@ -60,7 +60,7 @@ else task='discrimination'; end
     %ns=n_samples;
     %spe=P.number_samples_per_evidence;
     I.n_frames=numel(unique(S.access));
-    if max(abs(P.stimulus_contrast))>0 && P.P.prior_task(1)<P.P.prior_task(2)
+    if max(abs(P.stimulus_contrast))>0 && P.prior_task(1)<P.prior_task(2)
       warning('non-zero stim contrasts imply Task=1, not 2!!');
     end
     % Sanity checks
@@ -69,11 +69,7 @@ else task='discrimination'; end
     out.X=zeros(P.number_repetitions,P.number_locations*P.dimension_X, n_samples);
     % the below two lines are my way of dealing with Matlab's lack of
     % macros. use comments to switch between serial and parallel processing
-<<<<<<< Updated upstream
-    parfor i=1:P.number_repetitions,
-=======
     parfor i=1:P.number_repetitions
->>>>>>> Stashed changes
     %warning('serial!!'); for i=1:P.number_repetitions, ProgressReport(10,i-1,P.number_repetitions);
       if mod(i,20)==0
         disp(['Computing Repetition ' num2str(i) ' / ' num2str(P.number_repetitions)]);
@@ -143,4 +139,5 @@ else task='discrimination'; end
       end
     end
     out.Projection=P; out.InputImage=I; out.Sampling=S;
+    out=BackwardsComp(out);
 end

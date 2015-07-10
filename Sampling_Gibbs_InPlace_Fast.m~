@@ -38,8 +38,7 @@ kernel_G=zeros(P.dimension_G,P.dimension_X);
 C=1/besseli(0,P.kappa_G);
 for i=1:P.dimension_G
   for j=1:P.dimension_X
-    %kernel_G(i,j)=P.delta/P.dimension_X*(C*exp(P.kappa_G*cos(2*(P.phi_x(j)-P.phi_g(i))))); % OLD
-    kernel_G(i,j)=P.delta*(C*exp(P.kappa_G*cos(2*(P.phi_x(j)-P.phi_g(i))))); % July 9, 2015
+    kernel_G(i,j)=P.delta/P.dimension_X*(C*exp(P.kappa_G*cos(2*(P.phi_x(j)-P.phi_g(i)))));
   end
 end
 % check for worst case scenario
@@ -71,7 +70,7 @@ X=zeros(NX,NSamples); %
 G=zeros(P.number_locations,P.dimension_G,NSamples);
 Style=zeros(1,NSamples);
 L=zeros(   1,NSamples);
-Style(1)=P.tauStyle; % start with prior mean
+Style(1)=1; % start with Olshausen & Field
 %Style(1)=gamrnd(P.paraStyle(1),P.paraStyle(2),1); disp('Style ~ Gamma!');
 %Style(1)=exprnd(P.tauStyle,1); %disp('Style ~ Exp!');
 L(1)=find(cumsum(pL)>rand(1),1,'first');
@@ -99,7 +98,6 @@ for k=1:NX % current X to be sampled, order doesn't make a difference!
   kO=mod(k-1,P.dimension_X)+1; % index of current Gabor orientation
   kL=1+(k-kO)/P.dimension_X; % index of current location
   tau=1+G(kL,:,i)*kernel_G(:,kO); % simplification July 2013
-  %tau=P.delta+G(kL,:,i)*kernel_G(:,kO); % modification July 2015
   X(k,i)=exprnd(tau);
 end
 % Gibbs sampling ---------------------------------------------------------
@@ -123,7 +121,6 @@ for i=2:NSamples
     kO=mod(k-1,P.dimension_X)+1; % index of current Gabor orientation
     kL=1+(k-kO)/P.dimension_X; % index of current location
     tau=1+G(kL,:,i)*kernel_G(:,kO); % simplification July 2013
-    %tau=P.delta+G(kL,:,i)*kernel_G(:,kO); % modification July 2015
     if tau<=0, error(['tau<=0']); end
     muk=Style(i)*P.G(:,k)'*Input(:,access(i))+Style(i)^2*R(k,idx_no_k)*X(idx_no_k,i)-sigy^2/tau; % my calc - confirmed by PB
     muk=muk/Style(i)^2; % realized July 2013
@@ -146,7 +143,6 @@ for i=2:NSamples
         case 1, aux(2)=log(prob); % grating is on
       end
       tau=1+(GG(j,:)*kernel_G)';
-      %tau=P.delta+(GG(j,:)*kernel_G)'; % modification July 2015
       aux(1+glk)=aux(1+glk)-sum(log(tau)+X((j-1)*P.dimension_X+(1:P.dimension_X),i)./tau);
       if ~isreal(aux(1+glk))
         disp(['tau : ' num2str(tau')]);
