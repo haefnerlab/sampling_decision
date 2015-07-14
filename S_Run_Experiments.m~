@@ -17,7 +17,7 @@ switch fct
       for j=8:length(cond), disp(['j, c=' num2str([j cond{j}])]);
         para.stimulus_contrast=cond{j};
         if max(abs(cond{j}))==0
-          para.prior_task=[1 0]; % not oblique for corr matrix
+          para.prior_task=[1 0]; % no oblique for corr matrix
         else
           para.prior_task=[1 0]; % cardinal for non-zero constrast
         end
