@@ -203,29 +203,31 @@ else task='discrimination'; end
     P.kappa_G = G.kappa_G;
     P.stimulus_regime = I.stimulus_regime;
     P.stimulus_contrast = I.stimulus_contrast;
-    P.number_repetitions = S.number_repetitions;
-    P.n_zero_signal = S.zero_signal;
-    P.number_burn_in = S.number_burn_in;
-    P.number_samples_to_use = S.number_samples_to_use;
-    P.number_samples_per_evidence = S.number_samples_per_evidence;
-    P.phi_O = S.phi_O;
-    P.pO = S.pO;
-    P.pL= S.pL;
+    S.number_repetitions = S.number_repetitions;
+    S.zero_signal = S.n_zero_signal;
+    S.number_burn_in = S.number_burn_in;
+    S.number_samples_to_use = S.number_samples_to_use;
+    S.number_samples_per_evidence = S.number_samples_per_evidence;
+    S.phi_O = S.phi_O;
+    S.pO = S.pO;
+    .pL= S.pL;
     P.nT = S.nT;
     P.tauStyle = S.tauStyle;
     P.sigmaStyle = S.sigmaStyle;
-    P.delta = G.delta;
-    P.phi_x = G.phi_x;
-    P.task = G.task;
-    P.odds_inc = S.odds_inc;
-    P.phi_g = G.phi_g;
-    P.G = G.G;
-    P.x = I.x;
-    P.y = I.y;
-    P.n_samples = S.n_samples;
+    G.delta = P.delta;
+    G.phi_x = P.phi_x;
+    G.task = P.task;
+    S.odds_inc = P.odds_inc;
+    G.phi_g = P.phi_g;
+    G.G = P.G;
+    I.x = P.x;
+    I.y = P.y;
+    S.n_samples = P.n_samples;
     
     out.Projection=P; out.InputImage=I; out.Sampling=S;
 
     out = BackwardsComp(out);
+
+    out=BackwardsComp(out);
 
 end
