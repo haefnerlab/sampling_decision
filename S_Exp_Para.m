@@ -55,6 +55,7 @@ switch mode
     P.S.odds_inc=1/20; % with 80 samples/sec, every 250ms independent signal
     P.S.nT = 2; % Number of possible tasks
     
+<<<<<<< HEAD
   case 'test-2AFC-corr'
     P.G.number_orientations=2;
     P.G.prior_task=[0 1]; % [cardinal, oblique]
@@ -78,6 +79,31 @@ switch mode
     P.S.sigmaStyle=0.1;
     P.S.odds_inc=1/20; % with 80 samples/sec, every 250ms independent signal
     P.S.nT = 2; % Number of possible tasks
+=======
+  case 'paper-corr-performance'
+    P.number_orientations=2;
+    P.prior_task=[1 0]; % [cardinal, oblique]
+    P.number_locations=1;
+    P.dimension_X=512;
+    P.dimension_G=64;
+    P.kappa_O=[1 0]; % attended and unattended
+    P.kappa_G=3;
+    P.delta=0.08; % strength of X-G coupling for corr & CPs, 80/1024
+    P.stimulus_regime='static';
+    P.stimulus_contrast=zeros(1,P.number_orientations);
+    P.number_repetitions=512; % number of trials
+    P.n_zero_signal=20; % number of frames before onset of stimulus
+    P.number_burn_in=0; % number of burn-in samPles
+    P.number_samples_to_use=100; %Number  of non-burn samples to be used for evidence
+    P.number_samples_per_evidence=5; % for dynamic-switching-signal-blocked
+    P.phi_O=[[0:2:2*(P.number_orientations-1)];[1:2:2*P.number_orientations-1]]*pi/2/P.number_orientations;
+    P.pO=ones(1,P.number_orientations)/P.number_orientations;
+    P.pL=ones(1,P.number_locations)/P.number_locations;
+    P.tauStyle=0.1; % initial value for style
+    P.sigmaStyle=0.1;
+    P.odds_inc=1/20; % with 80 samples/sec, every 250ms independent signal
+    P.nT = 2; % Number of possible tasks
+>>>>>>> 58d7d223b6e855112951bf5a34a37d58101b5e77
 
   case 'test-contrast'
     P.G.number_orientations=2;
@@ -85,6 +111,7 @@ switch mode
     P.G.number_locations=1;
     P.dimension_X=256;
     P.dimension_G=64;
+<<<<<<< HEAD
     P.G.kappa_O=[1 0]; % attended and unattended
     P.G.kappa_G=3;
     P.G.delta=80/1024; % strength of X-G coupling in paper
@@ -102,6 +129,25 @@ switch mode
     P.S.sigmaStyle=0.1;
     P.S.odds_inc=1/20; % with 80 samples/sec, every 250ms independent signal
     P.S.nT = 2; % Number of possible tasks
+=======
+    P.kappa_O=[1 0]; % attended and unattended
+    P.kappa_G=3;
+    P.delta=80; % strength of X-G coupling in paper
+    P.stimulus_regime='static';
+    P.stimulus_contrast=zeros(1,P.number_orientations);
+    P.number_repetitions=128; % number of trials
+    P.n_zero_signal=20; % number of frames before onset of stimulus
+    P.number_burn_in=0; % number of burn-in samPles
+    P.number_samples_to_use=100; %Number  of non-burn samples to be used for evidence
+    P.number_samples_per_evidence=5; % for dynamic-switching-signal-blocked
+    P.phi_O=[[0:2:2*(P.number_orientations-1)];[1:2:2*P.number_orientations-1]]*pi/2/P.number_orientations;
+    P.pO=ones(1,P.number_orientations)/P.number_orientations;
+    P.pL=ones(1,P.number_locations)/P.number_locations;
+    P.tauStyle=1;
+    P.sigmaStyle=1e-10;
+    P.odds_inc=1/20; % with 80 samples/sec, every 250ms independent signal
+    P.nT = 2; % Number of possible tasks
+>>>>>>> 58d7d223b6e855112951bf5a34a37d58101b5e77
     
   otherwise
     warning('invalid option');
