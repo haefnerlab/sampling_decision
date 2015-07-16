@@ -43,17 +43,17 @@ end
 %aux=zeros(1,G.dimension_G); aux(kernel_G(:,1)<0)=1;
 %if aux*kernel_G(:,1)<1, error('kernel too negative!'); end
 %
-kernel_O=zeros([2 S.nT, Ge.number_orientations Ge.dimension_G]);
+kernel_O=zeros([2 G.nT, Ge.number_orientations Ge.dimension_G]);
 % 1st dim: 1 at attended location, 2 different location
 C1=1/besseli(0,Ge.kappa_O(1))/Ge.dimension_G; 
 C2=1/besseli(0,Ge.kappa_O(2))/Ge.dimension_G;
-for T=1:S.nT
+for T=1:G.nT
   for O=1:Ge.number_orientations
     switch P.task
-      case 'discrimination', delta_cos=cos(2*(S.phi_O(T,O)-Ge.phi_g));
+      case 'discrimination', delta_cos=cos(2*(G.phi_O(T,O)-Ge.phi_g));
       case 'detection'
         if O==1,             delta_cos=0; % stimulus absent
-        else                 delta_cos=cos(2*(S.phi_O(T,O)-Ge.phi_g));
+        else                 delta_cos=cos(2*(G.phi_O(T,O)-Ge.phi_g));
         end
     end
     kernel_O(1,T,O,:)=1*C1*exp(Ge.kappa_O(1)*delta_cos);
@@ -63,7 +63,7 @@ end
 kernel_O(kernel_O>1)=1;
 
 % initialization of samples
-pO=S.pO; pL=S.pL; prior_task=Ge.prior_task;
+pO=G.pO; pL=G.pL; prior_task=Ge.prior_task;
 
 X=zeros(NX,S.n_samples); %
 G=zeros(Ge.number_locations,Ge.dimension_G,S.n_samples);
@@ -75,7 +75,7 @@ X=zeros(NX, S.n_samples); %
 G=zeros(Ge.number_locations,Ge.dimension_G, S.n_samples);
 Style=zeros(1,S.n_samples);
 L=zeros(   1,S.n_samples);
-Style(1)=S.tauStyle; % start with prior mean
+Style(1)=G.tauStyle; % start with prior mean
 
 %Style(1)=gamrnd(P.paraStyle(1),P.paraStyle(2),1); disp('Style ~ Gamma!');
 %Style(1)=exprnd(P.tauStyle,1); %disp('Style ~ Exp!');
@@ -85,7 +85,7 @@ O(1)=find(mnrnd(1,pO)==1,1); %1+binornd(1,pO(2));
 pO_Posterior=zeros(Ge.number_orientations,S.n_samples);
 pO_Posterior(:,1)=pO;
 Task =zeros(1,S.n_samples); % 1st: sample, 2nd: ratio 2/1
-prior_task_Posterior=zeros(S.nT,S.n_samples);
+prior_task_Posterior=zeros(G.nT,S.n_samples);
 prior_task_Posterior(:,1)=prior_task;
 pL_Posterior=zeros(Ge.number_locations,S.n_samples);
 pL_Posterior(:,1)=pL;
@@ -177,8 +177,8 @@ for i=2:S.n_samples
     pL=pL_Posterior(:,i)';
     prior_task=prior_task_Posterior(:,i)';
   else
-    pO=S.pO; % initial prior (same one, no accumulation)
-    pL=S.pL;
+    pO=G.pO; % initial prior (same one, no accumulation)
+    pL=G.pL;
     prior_task=Ge.prior_task;
   end
   if max(pO)<1 % uncertainty left about O
@@ -233,10 +233,10 @@ for i=2:S.n_samples
   yGx=Input(:,access(i))'*Ge.G*X(:,i);
   if 0 % sparse prior
     sigs=sigy/sqrt(-xRx);
-    mus=(yGx/sigy^2-1/S.tauStyle)*sigy^2/(-xRx);
+    mus=(yGx/sigy^2-1/G.tauStyle)*sigy^2/(-xRx);
   else % slow prior
-    sigs=sqrt(1/(1/S.sigmaStyle^2-xRx/sigy^2));
-    mus=sigs^2*(yGx/sigy^2+Style(i)/S.sigmaStyle^2);
+    sigs=sqrt(1/(1/G.sigmaStyle^2-xRx/sigy^2));
+    mus=sigs^2*(yGx/sigy^2+Style(i)/G.sigmaStyle^2);
   end
   Style(i)=Cut_Gaussian('random',mus,sigs,1);
 end
@@ -251,6 +251,6 @@ if DEBUG
 end
 
 O   (2:1+Ge.number_orientations,:)=pO_Posterior;
-Task(2:1+S.nT,:)=prior_task_Posterior;
+Task(2:1+G.nT,:)=prior_task_Posterior;
 L   (2:1+Ge.number_locations,:)=pL_Posterior;
 %disp('end Gibbs sampling');

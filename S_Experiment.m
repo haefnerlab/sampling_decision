@@ -52,7 +52,7 @@ else task='discrimination'; end
         end
         P.S.access=1:P.S.n_samples;
       case 'dynamic-switching-signal-blocked'
-        zs=P.I.n_zero_signal+1; ns=P.S.n_samples; spe=P.S.number_samples_per_evidence;
+        zs=P.I.n_zero_signal+1; ns=P.S.n_samples; spe=P.G.number_samples_per_evidence;
         P.S.access=[1:zs zs+ceil((1:ns-zs)/spe)];
         P.I.n_frames=numel(unique(P.S.access));
         if P.I.n_zero_signal>=P.I.n_frames

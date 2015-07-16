@@ -114,11 +114,11 @@ switch fct
     ng=S.nG; phi_g=[0:ng-1]/ng*pi;
     phi=(0:S.nX-1)/S.nX*pi;
     nL=S.nL; %phi_g=ones(nL,1)*phi_g;
-    pO=S.pO; pL=S.pL;
+    pO=G.pO; pL=G.pL;
     %s=gamrnd(S.paraStyle(1),S.paraStyle(2),1); disp('s ~ Gamma!');
     s=exprnd(S.tau_Style,1); disp('s ~ Exp!');
-    L(1)=find(cumsum(S.pL)>rand(1),1,'first');
-    O(1)=1+binornd(1,S.pO(1)); % 1 and 2
+    L(1)=find(cumsum(G.pL)>rand(1),1,'first');
+    O(1)=1+binornd(1,G.pO(1)); % 1 and 2
     for j=1:S.nL
       if L(1)==j, beta=S.beta(2); else beta=S.beta(1); end
       for k=1:ng
