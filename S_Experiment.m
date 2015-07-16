@@ -114,7 +114,7 @@ else task='discrimination'; end
       
       %Perform a trial 
       [aux_X{i} aux_G{i} aux_O{i} aux_L{i} aux_S{i} aux_T{i}]=...
-        Sampling_Gibbs_InPlace_Fast(P.G, P.S, P.I ,Y,P.S.access,P.I.n_zero_signal);
+        Sampling_Gibbs_InPlace_Fast(P.G, P.S, P.I ,Y);
 
      for j=1:P.G.dimension_X*P.G.number_locations
         switch P.I.stimulus_regime

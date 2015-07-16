@@ -34,7 +34,6 @@ switch mode
   case 'top-downs-disabled'
     P.G.number_orientations=2;
     P.G.prior_task=[0 1]; % [cardinal, oblique]
-
     P.G.number_locations=1;
     P.G.dimension_X=100;
     P.G.dimension_G=16;
