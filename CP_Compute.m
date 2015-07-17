@@ -5,13 +5,13 @@ figure;
 %computes the choice probability for X(trail*neuron*time)
 %load('e_T0_1_X1024_G256_k10_3_t80_c0_rep1000_time100_b5_s001_001_i20.mat')
 %load e128_c10_5_0.mat
-load e_256_16_c15even.mat
+load test.mat
 structsize = length(e);%number of structs in the simulation 
 
 %%compute <|CP(0.5) - 0.5|> using the unbiased stimulus
 %identify TPR and FPR for that particular struct
-O = e{1,4}.O;
-X =e{1,4}.X;%load X.
+O = e.O;
+X =e.X;%load X.
 
 TPR =  O(:,2,end)>0.5;%True positive rate drawn at the end of the trails
 FPR = O(:,3,end)>0.5;%false positive rate 
@@ -58,10 +58,10 @@ ratio_matrix_x = zeros(1,structsize*neurons);
 ratio_matrix_y = zeros(1,structsize*neurons);
 
 for m = 1:structsize
-O = e{1,m}.O;
+O = e.O;
 TPR =  O(:,2,end)>0.5;%True positive rate drawn at the end of the trails
 FPR = O(:,3,end)>0.5;%false positive rate 
-X =e{1,m}.X;%load X.
+X =e.X;%load X.
 
 % optional plot of ROC curve 
 % 
@@ -189,7 +189,7 @@ plot(squeeze(CFBD_matrix(1,2,:)),squeeze(CFBD_matrix(2,2,:)),'*');
 hold on;
 errorbar(CFBD_matrix(1,2,:),CFBD_matrix(2,2,:),ERU_y,ERL_y,'*');
 hold on
-herrorbar(CFBD_matrix(1,2,:),CFBD_matrix(2,2,:),ERU_x, ERL_x, '*')
+%herrorbar(CFBD_matrix(1,2,:),CFBD_matrix(2,2,:),ERU_x, ERL_x, '*')
 % hold on
 % plot(squeeze(CFBD_matrix(1,1,:)),squeeze(CFBD_matrix(1,2,:)),'r*')
 % 
