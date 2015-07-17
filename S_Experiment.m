@@ -1,5 +1,5 @@
-function out = S_Experiment()
-P = S_Exp_Para('paper-2AFC-corr');
+function out = S_Experiment(mode)
+P = S_Exp_Para(mode);
 % 2x2: two locations, two orientations (NIPS)
 % 1xN: 1 location, many orientations
 % nxN: n locations, many orientations (Current!)
