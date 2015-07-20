@@ -12,11 +12,11 @@ switch mode
 
     P.G.kappa_O=[1 0]; % attended and unattended
     P.G.kappa_G=3;
-    P.G.delta=.0016; % strength of X-G coupling for corr & CPs
+    P.G.delta=.08; % strength of X-G coupling for corr & CPs
     P.I.stimulus_regime='static';
     P.I.stimulus_contrast=zeros(1,P.G.number_orientations);
 
-    P.S.number_repetitions=500; % number of trials
+    P.S.number_repetitions=100; % number of trials
     P.I.n_zero_signal=20; % number of frames before onset of stimulus
     P.S.alpha = 1.0;
     P.S.number_burn_in=0; % number of burn-in samPles
@@ -41,13 +41,13 @@ switch mode
 
     P.G.kappa_O=[1 0]; % attended and unattended
     P.G.kappa_G=3;
-    P.G.delta=.0016; % strength of X-G coupling for corr & CPs
+    P.G.delta=.08; % strength of X-G coupling for corr & CPs
     P.I.stimulus_regime='static';
     P.I.stimulus_contrast=zeros(1,P.G.number_orientations);
 
     P.S.number_repetitions=5; % number of trials
 
-    P.S.number_repetitions=16; % number of trials
+    P.S.number_repetitions=100; % number of trials
     P.I.n_zero_signal=20; % number of frames before onset of stimulus
     P.S.alpha = 0.0;
     P.S.number_burn_in=0; % number of burn-in samPles

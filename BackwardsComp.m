@@ -5,7 +5,8 @@ function out = BackwardsComp(out);
 	out.Projection.nX = out.Projection.G.dimension_X;
 	out.Projection.nG = out.Projection.G.dimension_G;
 	out.Projection.pT = out.Projection.G.prior_task;
-	
+	out.Projection.phi_x = out.Projection.G.phi_x;
+    out.Projection.phi_g = out.Projection.G.phi_g;
 	out.InputImage.dyn = out.Projection.I.stimulus_regime;
 	out.InputImage.c = out.Projection.I.stimulus_contrast;
 	out.Sampling.n_burn = out.Projection.S.number_burn_in;

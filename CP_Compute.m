@@ -1,11 +1,11 @@
-function CP_Compute
+function CP_Compute(e)
 close all;
 figure;
 
 %computes the choice probability for X(trail*neuron*time)
 %load('e_T0_1_X1024_G256_k10_3_t80_c0_rep1000_time100_b5_s001_001_i20.mat')
 %load e128_c10_5_0.mat
-load test.mat
+
 structsize = length(e);%number of structs in the simulation 
 
 %%compute <|CP(0.5) - 0.5|> using the unbiased stimulus
