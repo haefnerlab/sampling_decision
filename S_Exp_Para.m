@@ -16,7 +16,7 @@ switch mode
     P.I.stimulus_regime='static';
     P.I.stimulus_contrast=zeros(1,P.G.number_orientations);
 
-    P.S.number_repetitions=16; % number of trials
+    P.S.number_repetitions=500; % number of trials
     P.I.n_zero_signal=20; % number of frames before onset of stimulus
     P.S.alpha = 1.0;
     P.S.number_burn_in=0; % number of burn-in samPles
