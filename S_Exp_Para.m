@@ -6,10 +6,8 @@ switch mode
     P.G.prior_task=[0 1]; % [cardinal, oblique]
 
     P.G.number_locations=1;
-    P.G.dimension_X=256;
-    P.G.dimension_G=64;
-    P.G.connectivity='all'
-
+    P.G.dimension_X=1024;
+    P.G.dimension_G=256;
     P.G.kappa_O=[1 0]; % attended and unattended
     P.G.kappa_G=3;
     P.G.delta=.08; % strength of X-G coupling for corr & CPs
@@ -35,8 +33,8 @@ switch mode
     P.G.number_orientations=2;
     P.G.prior_task=[0 1]; % [cardinal, oblique]
     P.G.number_locations=1;
-    P.G.dimension_X=256;
-    P.G.dimension_G=64;
+    P.G.dimension_X=1024;
+    P.G.dimension_G=256;
     P.G.alpha = 0.0;
 
     P.G.kappa_O=[1 0]; % attended and unattended
@@ -47,7 +45,7 @@ switch mode
 
     P.S.number_repetitions=5; % number of trials
 
-    P.S.number_repetitions=100; % number of trials
+    P.S.number_repetitions=1000; % number of trials
     P.I.n_zero_signal=20; % number of frames before onset of stimulus
     P.S.alpha = 0.0;
     P.S.number_burn_in=0; % number of burn-in samPles

@@ -6,6 +6,7 @@ close all;
 
 %load e_Detection_T0_1_X1024_G256_k10_3_t80_c0_rep1000_time100_b5_s001_001_i20.mat
 X = e.X;
+X(isnan(X))=0;
 
 %%compute Corr_Matrix
 %%each row specify neuron(repetition) and each 100 column represent time in
@@ -16,9 +17,9 @@ X = e.X;
 close all;
 figure
 subplot(2,2,1);
-X_reshape = sum(X,3);%%sum the time trail of that data,1000*1024 array
+X_reshape = sum(X,3)%%sum the time trail of that data,1000*1024 array
 Corr_Matrix = corr(X_reshape);
-
+Corr_Matrix(isnan(Corr_Matrix)) =0;
 X_range = e.Projection.phi_x;%obtain axis range
 imagesc(X_range,X_range,Corr_Matrix);
 colorbar;

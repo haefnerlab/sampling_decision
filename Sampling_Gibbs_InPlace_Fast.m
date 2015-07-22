@@ -133,10 +133,10 @@ for i=2:S.n_samples
     sigk=sigy/Style(i); % realized July 2013
     kO=mod(k-1,Ge.dimension_X)+1; % index of current Gabor orientation
     kL=1+(k-kO)/Ge.dimension_X; % index of current location
-    tau=1+G(kL,:,i)*kernel_G(:,kO); % simplification July 2013
+    tau=1+S.alpha*G(kL,:,i)*kernel_G(:,kO); % simplification July 2013
     %tau=Ge.delta+G(kL,:,i)*kernel_G(:,kO); % modification July 2015
     if tau<=0, error(['tau<=0']); end
-    muk=Style(i)*Ge.G(:,k)'*Image(:,S.access(i))+Style(i)^2*R(k,idx_no_k)*X(idx_no_k,i)-S.alpha*sigy^2/tau; % my calc - confirmed by PB
+    muk=Style(i)*Ge.G(:,k)'*Image(:,S.access(i))+Style(i)^2*R(k,idx_no_k)*X(idx_no_k,i)-sigy^2/tau; % my calc - confirmed by PB
     muk=muk/Style(i)^2; % realized July 2013
     X(k,i)=Cut_Gaussian('random',muk,sigk,1);
     if ~isreal(X(k,i)), error(['X NaN, mu sigma: ' num2str([muk sigk])]); end
@@ -158,9 +158,10 @@ for i=2:S.n_samples
         case 0, aux(1)=log(1-prob); % grating off
         case 1, aux(2)=log(prob); % grating is on
       end
-      tau=1+(GG(j,:)*kernel_G)';
+      tau=1+ S.alpha*(GG(j,:)*kernel_G)';
       %tau=Ge.delta+(GG(j,:)*kernel_G)'; % modification July 2015
-      aux(1+glk)=aux(1+glk)- S.alpha * sum(log(tau)+X((j-1)*Ge.dimension_X+(1:Ge.dimension_X),i)./tau);
+      aux(1+glk);
+      aux(1+glk)=aux(1+glk)- sum(log(tau)+X((j-1)*Ge.dimension_X+(1:Ge.dimension_X),i)./tau);
 
       %ERROR HANDLING
       if ~isreal(aux(1+glk))
