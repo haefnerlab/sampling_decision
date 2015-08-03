@@ -149,7 +149,7 @@ for i=2:S.n_samples
   for jk=order, [j k]=ind2sub([Ge.number_locations Ge.dimension_G],jk);
     %pG=S_ConditionalProbs('pG_kgTLOx',[j k],G(:,:,i),Task(1,i),L(i),O(1,i),X(:,i),phi_O,phi_g,P);
     if L(i)==j, iL=1; else iL=2; end
-    prob=kernel_O(iL,Task(1,i),O(1,i),k);
+    prob= (kernel_O(iL,Task(1,i),O(1,i),k) + (1.0-S.alpha) * sum( kernel_O(iL, Task(1, i), :, k)) - (1.0-S.alpha)*kernel_O(iL,Task(1,i),O(1,i),k)); % + the sum of all other decisions scaled by alpha
     GG=G(:,:,i);
     aux=zeros(1,2);
     for glk=[0 1]
@@ -158,7 +158,7 @@ for i=2:S.n_samples
         case 0, aux(1)=log(1-prob); % grating off
         case 1, aux(2)=log(prob); % grating is on
       end
-      tau=1+ S.alpha*(GG(j,:)*kernel_G)';
+      tau=1+ (GG(j,:)*kernel_G)'; %Took out S.alpha scaling since it is tied to the G here. 
       %tau=Ge.delta+(GG(j,:)*kernel_G)'; % modification July 2015
       aux(1+glk);
       aux(1+glk)=aux(1+glk)- sum(log(tau)+X((j-1)*Ge.dimension_X+(1:Ge.dimension_X),i)./tau);

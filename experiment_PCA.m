@@ -17,7 +17,7 @@ X(isnan(X))=0;
 close all;
 figure
 subplot(2,2,1);
-X_reshape = sum(X,3)%%sum the time trail of that data,1000*1024 array
+X_reshape = sum(X,3); %%sum the time trail of that data,1000*1024 array
 Corr_Matrix = corr(X_reshape);
 Corr_Matrix(isnan(Corr_Matrix)) =0;
 X_range = e.Projection.phi_x;%obtain axis range
@@ -58,7 +58,7 @@ caxis([0,0.4]);
 [V, D] = eig(Corr_Matrix);
 
 Avg_response_var = mean(e.X,2);
-size(Avg_response_var)
+size(Avg_response_var);
  %%plotting the average response of all neurons over time for the first
  %%trail
 %  

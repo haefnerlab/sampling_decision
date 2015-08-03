@@ -1,5 +1,5 @@
 function out = S_Experiment(mode)
-P = S_Exp_Para(mode);
+P = mode; %S_Exp_Para(mode);
 % 2x2: two locations, two orientations (NIPS)
 % 1xN: 1 location, many orientations
 % nxN: n locations, many orientations (Current!)
@@ -75,11 +75,8 @@ else task='discrimination'; end
     % macros. use comments to switch between serial and parallel processing
 
     %PARALLEL SUPPORT
-    %parfor i=1:P.number_repetitions,
-    warning('serial!!'); for i=1:P.S.number_repetitions, ProgressReport(10,i-1,P.S.number_repetitions);
-
-    %parfor i=1:P.number_repetitions
-    %warning('serial!!'); for i=1:P.number_repetitions, ProgressReport(10,i-1,P.number_repetitions);
+    parfor i=1:P.S.number_repetitions,
+    %warning('serial!!'); for i=1:P.S.number_repetitions, ProgressReport(10,i-1,P.S.number_repetitions);
 
       if mod(i,20)==0
         disp(['Computing Repetition ' num2str(i) ' / ' num2str(P.S.number_repetitions)]);
