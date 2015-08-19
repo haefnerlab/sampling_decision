@@ -12,7 +12,7 @@ switch mode
     P.G.kappa_G=3;
     P.G.delta=.08; % strength of X-G coupling for corr & CPs
     P.I.stimulus_regime='static';
-    P.I.stimulus_contrast=zeros(1,P.G.number_orientations);
+    P.I.stimulus_contrast=ones(1,P.G.number_orientations);
 
     P.S.number_repetitions=100; % number of trials
     P.I.n_zero_signal=20; % number of frames before onset of stimulus
@@ -29,7 +29,7 @@ switch mode
     P.G.nT = 2; % Number of possible tasks
     
   case 'debugging'
-    P.G.number_orientations=2;
+    P.G.number_orientations=7;
     P.G.prior_task=[0 1]; % [cardinal, oblique]
 
     P.G.number_locations=1;
@@ -58,9 +58,9 @@ switch mode
     P.G.number_orientations=2;
     P.G.prior_task=[0 1]; % [cardinal, oblique]
     P.G.number_locations=1;
-    P.G.dimension_X=1024;
-    P.G.dimension_G=256;
-    P.G.alpha = 0.0;
+    P.G.dimension_X=256;
+    P.G.dimension_G=64;
+    P.G.alpha = 0.5;
 
     P.G.kappa_O=[1 0]; % attended and unattended
     P.G.kappa_G=3;
@@ -68,9 +68,9 @@ switch mode
     P.I.stimulus_regime='static';
     P.I.stimulus_contrast=zeros(1,P.G.number_orientations);
 
-    P.S.number_repetitions=100; % number of trials
+    P.S.number_repetitions=2000; % number of trials
     P.I.n_zero_signal=20; % number of frames before onset of stimulus
-    P.S.alpha = 0.1;
+    P.S.alpha = 0.5;
     P.S.number_burn_in=0; % number of burn-in samPles
     P.S.number_samples_to_use=100; %Number  of non-burn samples to be used for evidence
     P.G.number_samples_per_evidence=5; % for dynamic-switching-signal-blocked

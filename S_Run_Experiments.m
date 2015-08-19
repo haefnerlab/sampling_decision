@@ -6,9 +6,9 @@ switch fct
     for i=1:6, cond{7-i}=3*[i 0]; end
     cond{7}=[0 0];
     for i=1:6, cond{7+i}=3*[0 i]; end
-    para=S_Exp_Para('debugging')
+    para=S_Exp_Para('top-downs-disabled')
     
-    alpha=[0.0, 0.5, 1.0];
+    alpha=[0.0, 1.0];
     
     for i=1:length(alpha), disp(['i, alpha=' num2str([i alpha(i)])]);
       para.S.alpha=alpha(i);
