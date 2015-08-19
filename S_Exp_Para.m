@@ -1,4 +1,4 @@
-function P = S_Exp_Para(mode)
+function P = S_Exp_Para(mode, varargin)
 
 switch mode
   case 'paper-2AFC-corr'
@@ -188,4 +188,16 @@ switch mode
 
   otherwise
     warning('invalid option');
+  end
+    
+  % add in any additional args that were specified in 'varargin'
+  for i=1:2:length(varargin)-1
+      param_name = varargin{i};
+      param_value = varargin{i+1};
+      % strange but effective way of assigning into a nested struct
+      % so that we can do S_Exp_Para('debugging', 'S.alpha', 0.9) sort of
+      % thing (i.e. reference a struct in a struct)
+      field_reference = strsplit(param_name, '.');
+      P = subsasgn(P, struct('type', '.', 'subs', field_reference), param_value);
+  end
 end
