@@ -28,5 +28,5 @@ set(fig,'Tag',tag);
 hold on;
 
 if ~(isempty(tag) | tag(1)==' ' | tag=='~')
-  title(tag);
+    title(tag);
 end

@@ -6,7 +6,7 @@ figure;
 %load('e_T0_1_X1024_G256_k10_3_t80_c0_rep1000_time100_b5_s001_001_i20.mat')
 %load e128_c10_5_0.mat
 
-structsize = length(e);%number of structs in the simulation 
+structsize = length(e);%number of structs in the simulation
 
 %%compute <|CP(0.5) - 0.5|> using the unbiased stimulus
 %identify TPR and FPR for that particular struct
@@ -14,7 +14,7 @@ O = e.O;
 X =e.X;%load X.
 
 TPR =  O(:,2,end)>0.5;%True positive rate drawn at the end of the trails
-FPR = O(:,3,end)>0.5;%false positive rate 
+FPR = O(:,3,end)>0.5;%false positive rate
 
 [trails, neurons, time] = size(X);
 
@@ -24,20 +24,20 @@ choiceRatio_half = zeros(neurons,time);
 
 %%Loop through neurons to generate half CP and half choice ratio
 for i = 1: neurons
-  for j = 1 : time
-    pref=X(TPR,i,j);
-    anti=X(FPR,i,j);
-    L_pref = length(pref);
-    L_anti = length(anti);
-    minlength = min(L_pref,L_anti);
-    %%when length of pref and anti are different, roc function should be
-    %%used
-    %CP(i,j) = ROC(pref(nPref),anti(nAnti));
-    %CP(i,j)=(sum(x<y)+0.5*sum(x==y))/length(x)
-    %% because of the length of pref and anti are the same, this method, instead of the ROC curve, can be used
-    CP_half(i,j) = (sum(pref(1:minlength)<anti(1:minlength))+0.5*sum(pref(1:minlength)==anti(1:minlength)))/minlength;
-    choiceRatio_half(i,j) = L_pref/(L_pref+L_anti);
-  end
+    for j = 1 : time
+        pref=X(TPR,i,j);
+        anti=X(FPR,i,j);
+        L_pref = length(pref);
+        L_anti = length(anti);
+        minlength = min(L_pref,L_anti);
+        %%when length of pref and anti are different, roc function should be
+        %%used
+        %CP(i,j) = ROC(pref(nPref),anti(nAnti));
+        %CP(i,j)=(sum(x<y)+0.5*sum(x==y))/length(x)
+        %% because of the length of pref and anti are the same, this method, instead of the ROC curve, can be used
+        CP_half(i,j) = (sum(pref(1:minlength)<anti(1:minlength))+0.5*sum(pref(1:minlength)==anti(1:minlength)))/minlength;
+        choiceRatio_half(i,j) = L_pref/(L_pref+L_anti);
+    end
 end
 
 %plot <|CP(0.5) - 0.5|>
@@ -58,94 +58,94 @@ ratio_matrix_x = zeros(1,structsize*neurons);
 ratio_matrix_y = zeros(1,structsize*neurons);
 
 for m = 1:structsize
-O = e.O;
-TPR =  O(:,2,end)>0.5;%True positive rate drawn at the end of the trails
-FPR = O(:,3,end)>0.5;%false positive rate 
-X =e.X;%load X.
-
-% optional plot of ROC curve 
-% 
-% for k = 1:80 % for each time bin, calculate TPR & FPR for the time bin
-%   TPR =  O(:,2,k)>0.5;%True positive rate drawn at the end of the trails?
-%   FPR = O(:,3,k)>0.5;
-%    plot(length(O(TPR))/1000,length(O(FPR))/1000,'*')
-%   hold on;
-% end
-
-
-[trails, neurons, time] = size(X);
-
-CP = zeros(neurons,time);%%cp of neurons across time
-%minlength = min(length(pref),length(anti))
-choiceRatio = zeros(neurons,time);
-
-%in struct 7, has a TPR of 0
-for i = 1: neurons
-  for j = 1 : time
-    pref=X(TPR,i,j);
-    anti=X(FPR,i,j);
-    L_pref = length(pref);
-    L_anti = length(anti);
-%     nPref = 1:L_pref;
-%     nAnti = 1:L_anti;  
-    minlength = min(L_pref,L_anti);
-    %CP(i,j) = ROC(pref(nPref),anti(nAnti));
-    %CP(i,j)=(sum(x<y)+0.5*sum(x==y))/length(x)
-    CP(i,j) = (sum(pref(1:minlength)<anti(1:minlength))+0.5*sum(pref(1:minlength)==anti(1:minlength)))/minlength;
-    choiceRatio(i,j) = L_pref/(L_pref+L_anti);
-  end
+    O = e.O;
+    TPR =  O(:,2,end)>0.5;%True positive rate drawn at the end of the trails
+    FPR = O(:,3,end)>0.5;%false positive rate
+    X =e.X;%load X.
+    
+    % optional plot of ROC curve
+    %
+    % for k = 1:80 % for each time bin, calculate TPR & FPR for the time bin
+    %   TPR =  O(:,2,k)>0.5;%True positive rate drawn at the end of the trails?
+    %   FPR = O(:,3,k)>0.5;
+    %    plot(length(O(TPR))/1000,length(O(FPR))/1000,'*')
+    %   hold on;
+    % end
+    
+    
+    [trails, neurons, time] = size(X);
+    
+    CP = zeros(neurons,time);%%cp of neurons across time
+    %minlength = min(length(pref),length(anti))
+    choiceRatio = zeros(neurons,time);
+    
+    %in struct 7, has a TPR of 0
+    for i = 1: neurons
+        for j = 1 : time
+            pref=X(TPR,i,j);
+            anti=X(FPR,i,j);
+            L_pref = length(pref);
+            L_anti = length(anti);
+            %     nPref = 1:L_pref;
+            %     nAnti = 1:L_anti;
+            minlength = min(L_pref,L_anti);
+            %CP(i,j) = ROC(pref(nPref),anti(nAnti));
+            %CP(i,j)=(sum(x<y)+0.5*sum(x==y))/length(x)
+            CP(i,j) = (sum(pref(1:minlength)<anti(1:minlength))+0.5*sum(pref(1:minlength)==anti(1:minlength)))/minlength;
+            choiceRatio(i,j) = L_pref/(L_pref+L_anti);
+        end
+    end
+    
+    CP = mean(CP,2);% average Cp over time
+    choiceRatio = mean(choiceRatio,2);
+    nom = abs(CP-0.5);
+    %plot(e.Projection.phi_x, CP,'b');
+    subplot(2,2,2);
+    plot(choiceRatio, nom,'*');
+    hold on
+    title('<|CP - 0.5|>')
+    ratio = nom./denom;%%num and denom are two arrays with the length of the number of neurons
+    
+    %Standard error of the <CP-.5>/<CP(0.5)-0.5>
+    SE = std(ratio)/sqrt(length(ratio));
+    
+    % %plot all data distribution
+    % subplot(2,2,3);
+    % plot(choiceRatio, ratio ,'*');
+    % title('<|CP - 0.5|>/<|CP(0.5) - 0.5|> ')
+    % hold on
+    
+    
+    %%load data and ratio into the grand ratio matrix to plot later and divide
+    %%into groups
+    start = (m-1)*256+1;
+    End = m*256;
+    ratio_matrix_x(start:End) = choiceRatio(1,1);%%since choiceratio doesnt change across trails
+    ratioT = ratio';
+    ratio_matrix_y(start:End) = ratioT(1:256)';
+    
+    %calculate mean
+    ratio_sum = sum(ratio);
+    average = ratio_sum./neurons;
+    
+    
+    %plot error bar with mean
+    subplot(2,2,4)
+    plot(choiceRatio,average,'b')
+    choiceRatio = choiceRatio(1);%choice ratio does not change across all neurons
+    all_choice_ratio(1, m) = choiceRatio;
+    all_average(1,m) = average;
+    all_errorbar(1,m) = SE;
+    
+    errorbar(choiceRatio,average,SE)%%choice ratio, average are 1*1
+    title('average choice ratio');
+    
 end
-
-CP = mean(CP,2);% average Cp over time
-choiceRatio = mean(choiceRatio,2);
-nom = abs(CP-0.5);
-%plot(e.Projection.phi_x, CP,'b');
-subplot(2,2,2);
-plot(choiceRatio, nom,'*');
-hold on
-title('<|CP - 0.5|>')
-ratio = nom./denom;%%num and denom are two arrays with the length of the number of neurons
-
-%Standard error of the <CP-.5>/<CP(0.5)-0.5>
-SE = std(ratio)/sqrt(length(ratio));
-
-% %plot all data distribution
-% subplot(2,2,3);
-% plot(choiceRatio, ratio ,'*');
-% title('<|CP - 0.5|>/<|CP(0.5) - 0.5|> ')
-% hold on
-
-
-%%load data and ratio into the grand ratio matrix to plot later and divide
-%%into groups
-start = (m-1)*256+1;
-End = m*256;
-ratio_matrix_x(start:End) = choiceRatio(1,1);%%since choiceratio doesnt change across trails
-ratioT = ratio';
-ratio_matrix_y(start:End) = ratioT(1:256)';
-
-%calculate mean 
-ratio_sum = sum(ratio);
-average = ratio_sum./neurons;
-
-
-%plot error bar with mean
-subplot(2,2,4)
-plot(choiceRatio,average,'b')
-choiceRatio = choiceRatio(1);%choice ratio does not change across all neurons
-all_choice_ratio(1, m) = choiceRatio;
-all_average(1,m) = average;
-all_errorbar(1,m) = SE;
-
-errorbar(choiceRatio,average,SE)%%choice ratio, average are 1*1
-title('average choice ratio');
-
-end 
 
 
 %%divide into different sized bins to determine their median and error bar
 %%at  25% bound
-binumber = 2;%use the number of bins to determine binsize. 
+binumber = 2;%use the number of bins to determine binsize.
 binwidth = 1/binumber;%given 1 is the largest ratio possible staring at 0
 binmatrix = zeros(2,length(ratio_matrix_x));%binmatrix = 2*lengthofdata
 binmatrix(1,:) = ratio_matrix_x;
@@ -162,13 +162,13 @@ endbin = 1+binwidth;
 
 
 for k = 1:(binumber)
-  %%sort matrix into different bins
-  startbin = startbin - binwidth;
-  endbin = endbin-binwidth;%decrement endbin
-
-  A = sorted_matrix(:,intersect(find(sorted_matrix(1,:)>=startbin),find(sorted_matrix(1,:)<=endbin)));
-  binned_matrix(:,1:length(A),k) = A;
-  %binumber = binumber - 1;
+    %%sort matrix into different bins
+    startbin = startbin - binwidth;
+    endbin = endbin-binwidth;%decrement endbin
+    
+    A = sorted_matrix(:,intersect(find(sorted_matrix(1,:)>=startbin),find(sorted_matrix(1,:)<=endbin)));
+    binned_matrix(:,1:length(A),k) = A;
+    %binumber = binumber - 1;
 end
 
 subplot(2,2,4)
@@ -192,7 +192,7 @@ hold on
 %herrorbar(CFBD_matrix(1,2,:),CFBD_matrix(2,2,:),ERU_x, ERL_x, '*')
 % hold on
 % plot(squeeze(CFBD_matrix(1,1,:)),squeeze(CFBD_matrix(1,2,:)),'r*')
-% 
+%
 % hold on
 % plot(squeeze(CFBD_matrix(1,3,:)),squeeze(CFBD_matrix(1,2,:)),'r*')
 
@@ -202,11 +202,11 @@ hold on
 % errorbar(all_choice_ratio,all_average,all_errorbar)%%choice ratio, average are 1*1
 % title('average choice ratio');
 % %plot(choiceRatio, ratio(1,:) ,'*');
-% 
+%
 % %%plot the scattered plot according to different size of bin histogram
-% 
+%
 % %1. collect all the points from all rounds of simulation
-% 
+%
 %plot all data distribution
 subplot(2,2,3);
 plot(ratio_matrix_x, ratio_matrix_y ,'*');

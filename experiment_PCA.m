@@ -1,5 +1,5 @@
 %calculating correlation matrix, eigenvalue and eigenvectors
-%created by Shuchen Wu 
+%created by Shuchen Wu
 %06/2015
 function experiment_PCA(e)
 close all;
@@ -26,10 +26,10 @@ colorbar;
 caxis auto;
 %%why is x and y labelled deltaphi?
 
-xlabel('\Delta\phi'); 
+xlabel('\Delta\phi');
 ylabel('\Delta\phi');
 set(gca,'xtick',[0 pi],'xticklabel',{'0','pi'},...
-       'ytick',[0 pi],'yticklabel',{'0','pi'});
+    'ytick',[0 pi],'yticklabel',{'0','pi'});
 set(gca,'Ydir','Normal');
 axis tight;
 caxis([0,0.4]);
@@ -46,10 +46,10 @@ colorbar;
 caxis auto;
 %%why is x and y labelled deltaphi?
 
-xlabel('\Delta\phi'); 
+xlabel('\Delta\phi');
 ylabel('\Delta\phi');
 set(gca,'xtick',[0 pi],'xticklabel',{'0','pi'},...
-       'ytick',[0 pi],'yticklabel',{'0','pi'});
+    'ytick',[0 pi],'yticklabel',{'0','pi'});
 set(gca,'Ydir','Normal');
 axis tight;
 caxis([0,0.4]);
@@ -59,15 +59,15 @@ caxis([0,0.4]);
 
 Avg_response_var = mean(e.X,2);
 size(Avg_response_var);
- %%plotting the average response of all neurons over time for the first
- %%trail
-%  
+%%plotting the average response of all neurons over time for the first
+%%trail
+%
 % plot(squeeze(Avg_response_var(1,1,:)));
 % title('Average resoponse of all neurons given the first stimulus over time')
 % xlabel('time');
 % ylabel('average spikes')
 % figure;
-% 
+%
 % plot(real(eig(Corr_Matrix)), '*')%%unnormalized eigenvalue
 % title('plotting the unnormalized eigenvalue')
 % figure;
@@ -81,16 +81,16 @@ size(Avg_response_var);
 % hold on;
 % plot(3*[-V_max(2,1) V_max(2,1)],3*[-V_max(2,2) V_max(2,2)],'k')
 % plot(3*[-V_max(1,1) V_max(1,1)],3*[-V_max(1,2) V_max(1,2)],'k')
-    % use the following statement to retrieve X for ICA or so
-    %varargout{1}=sum(X(:,:,n0S:end),3); return;
-   
-    
+% use the following statement to retrieve X for ICA or so
+%varargout{1}=sum(X(:,:,n0S:end),3); return;
+
+
 %%Compute CP
 O = e.O;
 TPR =  O(:,2,end)>0.5;%True positive rate drawn at the end of the trails?
-FPR = O(:,3,end)>0.5;%false positive rate 
+FPR = O(:,3,end)>0.5;%false positive rate
 O_reshape = sum(O,3);%sum obver time domain
-%  trying to construct a ROC curve 
+%  trying to construct a ROC curve
 
 
 % for k = 1:100
@@ -104,35 +104,35 @@ O_reshape = sum(O,3);%sum obver time domain
 
 CP = zeros(neurons,time);%%cp of neurons across time
 %minlength = min(length(pref),length(anti))
- 
+
 for i = 1: neurons
-  for j = 1 : time
-    pref=X(TPR,i,j);
-    anti=X(FPR,i,j);
-    L_pref = length(pref);
-    L_anti = length(anti);
-%     nPref = 1:L_pref;
-%     nAnti = 1:L_anti;
-    
-    minlength = min(L_pref,L_anti);
-
-    %CP(i,j) = ROC(pref(nPref),anti(nAnti));
-    %CP(i,j)=(sum(x<y)+0.5*sum(x==y))/length(x)
-    CP(i,j) = (sum(pref(1:minlength)<anti(1:minlength))+0.5*sum(pref(1:minlength)==anti(1:minlength)))/minlength;
-
-  end
+    for j = 1 : time
+        pref=X(TPR,i,j);
+        anti=X(FPR,i,j);
+        L_pref = length(pref);
+        L_anti = length(anti);
+        %     nPref = 1:L_pref;
+        %     nAnti = 1:L_anti;
+        
+        minlength = min(L_pref,L_anti);
+        
+        %CP(i,j) = ROC(pref(nPref),anti(nAnti));
+        %CP(i,j)=(sum(x<y)+0.5*sum(x==y))/length(x)
+        CP(i,j) = (sum(pref(1:minlength)<anti(1:minlength))+0.5*sum(pref(1:minlength)==anti(1:minlength)))/minlength;
+        
+    end
 end
 CP = mean(CP,2);% average Cp over time
- subplot(2,2,2);
+subplot(2,2,2);
 plot(e.Projection.phi_x, CP,'b');
 title('simulated CP')
 xlabel('orientation')
 ylabel('CP')
 
 %Corr_Inv = inv(Corr_Matrix);
-%Weights = zeros(neurons,1); % construct 1024*1 matrix for weights 
+%Weights = zeros(neurons,1); % construct 1024*1 matrix for weights
 Const =  pi/sqrt(2);
- subplot(2,2,3);
+subplot(2,2,3);
 
 C = Corr_Matrix;
 Gamma = (CP - 0.5).*Const;%%Sqrt(Ckk) is always 1, so doesnt matter
@@ -150,7 +150,7 @@ ylabel('CP')
 %     Sum = Sum + Corr_Inv(k,l)*sqrt(Corr_Matrix(l,l))*(CP(l)-0.5);
 %   end
 %    Weights(k,1) = Sum;
-% end 
+% end
 % Weights = Weights.*Const./(neurons);
 % figure
 % plot(e.Projection.phi_x,Weights(:,1), 'r*')
@@ -167,9 +167,9 @@ ylabel('CP')
 
 
 
-    
- 
-    
-    
+
+
+
+
 
 
