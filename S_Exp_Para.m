@@ -189,7 +189,6 @@ switch mode
     otherwise
         warning('invalid option');
 end
-
 % add in any additional args that were specified in 'varargin'
 for i=1:2:length(varargin)-1
     param_name = varargin{i};
