@@ -45,12 +45,14 @@ P.G.nT = 2; % number of possible tasks
 P.G.tauStyle = 0.1; % initial value for style
 P.G.number_samples_per_evidence = 2; % for dynamic-switching-signal-blocked
 P.G.task = 'discrimination'; % other option is 'detection'
+P.G.nx = 32; % width of projective field patch
 
 % SAMPLER params
 P.S.number_repetitions = 512;    % number of trials
 P.S.number_burn_in = 0;          % number of burn-in samples
 P.S.alpha = 1.0;                 % strength of top-down influence (0 to 1)
 P.S.number_samples_to_use = 100; % number of non-burn samples to be used for evidence
+P.S.n_samples = P.S.number_burn_in+P.S.number_samples_to_use;
 
 % STIMULUS params
 P.I.stimulus_regime = 'static';
@@ -130,5 +132,6 @@ P.G.pO = ones(1,P.G.number_orientations)/P.G.number_orientations;
 P.G.pL = ones(1,P.G.number_locations)/P.G.number_locations;
 P.G.phi_O = [[0:2:2*(P.G.number_orientations-1)];[1:2:2*P.G.number_orientations-1]]*pi/2/P.G.number_orientations;
 P.I.stimulus_contrast = zeros(1,P.G.number_orientations);
+P.S.n_samples = P.S.number_burn_in+P.S.number_samples_to_use;
 
 end

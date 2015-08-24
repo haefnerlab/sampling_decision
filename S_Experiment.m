@@ -13,24 +13,14 @@ P = params;
 % nxN: n locations, many orientations (Current)
 
 % Generative model
-if nargin < 2, P.G.nx = 32;
-else P.G.nx = varargin{1}; end
-
 projective_fields = C_Projection('nxN', P.G.nx, P.G.dimension_X, P.G.dimension_G, P.G.number_locations);
 P.fct='t-l-op-g-s';
+P.G.G     = projective_fields.G;
 P.G.phi_x = projective_fields.phi_x;
 P.G.phi_g = projective_fields.phi_g;
-P.G.G = projective_fields.G;
-P.I.x = projective_fields.x;
-P.I.y=projective_fields.y;
-P.G.ny=projective_fields.ny;
-
-% Sampling setup
-P.S.n_samples=P.S.number_burn_in+P.S.number_samples_to_use;
-
-
-
-
+P.G.ny    = projective_fields.ny;
+P.I.x     = projective_fields.x;
+P.I.y     = projective_fields.y;
 
 % Input
 P.I.fct='nx2';
