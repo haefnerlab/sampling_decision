@@ -143,19 +143,8 @@ switch P.I.stimulus_regime
         P.I.n_frames = numel(unique(P.S.access));
 end
 
-%% warn about certain cases
-if P.I.n_zero_signal >= P.I.n_frames
-    error('n_zero_signal >= n_frames. Nothing left to be signal!');
-end
-if strcmpi(P.G.task, 'detection') && P.G.number_orientations ~= 2
-    warning('detection task expects number_orientations to be 2');
-end
-if P.G.kappa_O(2) >= P.G.kappa_O(1)
-    warning('are you sure about P.kappa?'); 
-end
-if max(abs(P.I.stimulus_contrast)) > 0 && P.G.prior_task(1) < P.G.prior_task(2)
-    warning('non-zero stim contrasts imply Task = 1, not 2!!');
-end
+%% error or warn about certain cases
+Check_Parameter_Sanity(P);
 
 %% recompute the variables that are dependent on others in case the dependencies changed
 % via varargin (note this means varargin cannot be used to override any of these directly)
