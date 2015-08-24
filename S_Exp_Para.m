@@ -44,6 +44,7 @@ P.G.delta = .08; % strength of X-G coupling for corr & CPs
 P.G.nT = 2; % number of possible tasks
 P.G.tauStyle = 0.1; % initial value for style
 P.G.number_samples_per_evidence = 2; % for dynamic-switching-signal-blocked
+P.G.task = 'discrimination'; % other option is 'detection'
 
 % SAMPLER params
 P.S.number_repetitions = 512;    % number of trials
@@ -116,6 +117,11 @@ for i=1:2:length(varargin)-1
     % thing (i.e. reference a struct in a struct)
     field_reference = strsplit(param_name, '.');
     P = subsasgn(P, struct('type', '.', 'subs', field_reference), param_value);
+end
+
+% warn about certain cases
+if strcmpi(P.G.task, 'detection') && P.G.number_orientations ~= 2
+    warning('detection task expects number_orientations to be 2');
 end
 
 % recompute the variables that are dependent on others in case the dependencies changed

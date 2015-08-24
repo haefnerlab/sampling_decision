@@ -3,10 +3,6 @@ P = mode; %S_Exp_Para(mode);
 % 2x2: two locations, two orientations (NIPS)
 % 1xN: 1 location, many orientations
 % nxN: n locations, many orientations (Current!)
-if P.G.number_orientations<0, 
-    task='detection'; 
-    P.G.number_orientations=2; 
-else task='discrimination'; end
 
     % Generative model
     P.G.nx=Get_Varargin;
