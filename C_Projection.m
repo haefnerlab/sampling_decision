@@ -5,8 +5,10 @@ function P = C_Projection(fct, varargin)
 %       P.G projection matrices as (flattened 1D pixels)x(n_matrices)
 %       P.x x-axis
 %       P.y y-axis
-%       P.nx, P.ny size of each projective field (i.e. P.nx*P.ny == size(P.G(:,1))
-%       P.tau controls prior of X not in agreement with l & o
+%       P.nx, P.ny size of each projective field 
+%                  (i.e. P.nx*P.ny == size(P.G(:,1))
+%       P.tau controls prior of X not in agreement with l & o (not used in
+%             nxN case)
 %
 %       fct is a string with '#locations x #orientations' and may be '2x2',
 %       'nx2', '1xN', or 'nxN'
