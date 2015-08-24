@@ -36,8 +36,7 @@ P.G.kappa_G = 3;
 P.G.pO = ones(1,P.G.number_orientations)/P.G.number_orientations;
 P.G.pL = ones(1,P.G.number_locations)/P.G.number_locations;
 P.G.phi_O = [(0:2:2*(P.G.number_orientations-1));...
-             (1:2:2*P.G.number_orientations-1)] *...
-             pi/2/P.G.number_orientations;
+             (1:2:2*P.G.number_orientations-1)] * pi/2/P.G.number_orientations;
 P.G.sigmaStyle = 0.1;
 P.G.odds_inc = 1/20; % with 80 samples/sec, every 250ms independent signal
 P.G.delta = .08; % strength of X-G coupling for corr & CPs
@@ -162,7 +161,8 @@ end
 % via varargin (note this means varargin cannot be used to override any of these directly)
 P.G.pO = ones(1,P.G.number_orientations)/P.G.number_orientations;
 P.G.pL = ones(1,P.G.number_locations)/P.G.number_locations;
-P.G.phi_O = [[0:2:2*(P.G.number_orientations-1)];[1:2:2*P.G.number_orientations-1]]*pi/2/P.G.number_orientations;
+P.G.phi_O = [(0:2:2*(P.G.number_orientations-1)); ...
+             (1:2:2*P.G.number_orientations-1)] * pi/2/P.G.number_orientations;
 P.I.stimulus_contrast = zeros(1,P.G.number_orientations);
 P.S.n_samples = P.S.number_burn_in+P.S.number_samples_to_use;
 
