@@ -55,6 +55,7 @@ P.S.number_samples_to_use = 100; % number of non-burn samples to be used for evi
 P.S.n_samples = P.S.number_burn_in+P.S.number_samples_to_use;
 
 % STIMULUS params
+P.I.fct = 'nx2';
 P.I.stimulus_regime = 'static';
 P.I.n_zero_signal = 20; % number of frames before onset of stimulus
 P.I.stimulus_contrast = zeros(1,P.G.number_orientations);
@@ -110,7 +111,7 @@ switch mode
         warning('invalid option');
 end
 
-% add in any additional args that were specified in 'varargin'
+%% add in any additional args that were specified in 'varargin'
 for i=1:2:length(varargin)-1
     param_name = varargin{i};
     param_value = varargin{i+1};
@@ -121,12 +122,43 @@ for i=1:2:length(varargin)-1
     P = subsasgn(P, struct('type', '.', 'subs', field_reference), param_value);
 end
 
-% warn about certain cases
+%% further process P.I according to stimulus regime
+% P.I.n_frames is how many unique input images to generate, and
+% P.S.access tells the sampler which 'frame' to use at each sample
+switch P.I.stimulus_regime
+    case {'static','blank'}
+        P.I.n_frames = 1;
+        P.S.access = ones(1,P.S.n_samples);
+    case 'static-delayed'
+        P.I.n_frames = 2;
+        P.S.access = ones(1,P.S.n_samples);
+        P.S.access(P.I.n_zero_signal+1:end) = 2;
+    case {'dynamic-delayed', 'dynamic-switching-signal'}
+        P.I.n_frames = P.S.n_samples;
+        P.S.access = 1:P.S.n_samples;
+    case 'dynamic-switching-signal-blocked'
+        zs = P.I.n_zero_signal+1;
+        ns = P.S.n_samples;
+        spe = P.G.number_samples_per_evidence;
+        P.S.access = [1:zs zs+ceil((1:ns-zs)/spe)];
+        P.I.n_frames = numel(unique(P.S.access));
+end
+
+%% warn about certain cases
+if P.I.n_zero_signal >= P.I.n_frames
+    error('n_zero_signal >= n_frames. Nothing left to be signal!');
+end
 if strcmpi(P.G.task, 'detection') && P.G.number_orientations ~= 2
     warning('detection task expects number_orientations to be 2');
 end
+if P.G.kappa_O(2) >= P.G.kappa_O(1)
+    warning('are you sure about P.kappa?'); 
+end
+if max(abs(P.I.stimulus_contrast)) > 0 && P.G.prior_task(1) < P.G.prior_task(2)
+    warning('non-zero stim contrasts imply Task = 1, not 2!!');
+end
 
-% recompute the variables that are dependent on others in case the dependencies changed
+%% recompute the variables that are dependent on others in case the dependencies changed
 % via varargin (note this means varargin cannot be used to override any of these directly)
 P.G.pO = ones(1,P.G.number_orientations)/P.G.number_orientations;
 P.G.pL = ones(1,P.G.number_locations)/P.G.number_locations;
