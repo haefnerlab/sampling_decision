@@ -15,18 +15,18 @@ function P = C_Projection(fct, varargin)
 %
 %   C_PROJECTION(fct, ..., 'debug') visualize the resulting projective fields
 %
-%   P = C_Projection('2x2', [nx, [tau]]) Creates two gabors in two locations
+%   P = C_Projection('2x2', [nx, [tau]]) Creates two Gabors in two locations
 %       (Left, Right) x (Vertical, Horizontal). nx defaults to 32, tau to 1
 %
-%   P = C_Projection('nx2', [nx, [tau, [nL]]) Creates gabors in nL locations,
+%   P = C_Projection('nx2', [nx, [tau, [nL]]) Creates Gabors in nL locations,
 %       where each gabor is given a square patch. The resulting projective
 %       fields are each (nx*nL) by (nx) pixels. nL defaults to 1
 %       The field P.nL is also set.
 %
-%   P = C_Projection('1xN', [nx, [tau, [nX]]]) Creates gabors at nX orientations
+%   P = C_Projection('1xN', [nx, [tau, [nX]]]) Creates Gabors at nX orientations
 %       The fields P.nX, P.phi_x are also set.
 %
-%   P = C_Projection('nxN', [nx, [nX, [nG, [nL]]]]]) Creates gabores at nL
+%   P = C_Projection('nxN', [nx, [nX, [nG, [nL]]]]]) Creates Gabors at nL
 %       locations, with nX orientations. (unclear what nG does)
 %       P.nX, P.nG, P.nL, P.phi_x, P.phi_g all set
 
@@ -58,7 +58,7 @@ switch fct
         P.x = linspace(-2,2,P.nx);
         P.y = linspace(-2,2,P.ny);
         [xx, yy] = meshgrid(P.x,P.y);
-        % create gabors (Left, Right)x(Vertical, Horizontal)
+        % create Gabors (Left, Right)x(Vertical, Horizontal)
         LV = Gabor_neu([0 1 1 pi/2 -1 0.2], xx, 'orig') .* normpdf(yy, 0,0.3);
         RV = Gabor_neu([0 1 1 pi/2  1 0.2], xx, 'orig') .* normpdf(yy, 0,0.3);
         LH = Gabor_neu([0 1 1 pi/2  0 0.2], yy, 'orig') .* normpdf(xx,-1,0.3);
