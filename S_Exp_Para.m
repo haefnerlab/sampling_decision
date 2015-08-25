@@ -118,6 +118,9 @@ for i=1:2:length(varargin)-1
     % so that we can do S_Exp_Para('debugging', 'S.alpha', 0.9) sort of
     % thing (i.e. reference a struct in a struct)
     field_reference = strsplit(param_name, '.');
+    try subsref(P, struct('type', '.', 'subs', field_reference));
+    catch, warning('Setting non-existent parameter P.%s', param_name); 
+    end
     P = subsasgn(P, struct('type', '.', 'subs', field_reference), param_value);
 end
 
