@@ -45,6 +45,7 @@ P.G.tauStyle = 0.1; % initial value for style
 P.G.number_samples_per_evidence = 2; % for dynamic-switching-signal-blocked
 P.G.task = 'discrimination'; % other option is 'detection'
 P.G.nx = 32; % width of projective field patch
+P.G.fct = 'nxN';
 
 % SAMPLER params
 P.S.number_repetitions = 512;    % number of trials
@@ -145,6 +146,22 @@ switch P.I.stimulus_regime
         P.S.access = [1:zs zs+ceil((1:ns-zs)/spe)];
         P.I.n_frames = numel(unique(P.S.access));
 end
+
+%% Build generative model
+
+% P.G.fct may be:
+%   2x2: two locations, two orientations (NIPS)
+%   1xN: 1 location, many orientations
+%   nx2: n locations, two orientations
+%   nxN: n locations, many orientations (Current)
+projective_fields = C_Projection(P.G.fct, P.G.nx, P.G.dimension_X, P.G.dimension_G, P.G.number_locations);
+P.fct = 't-l-op-g-s';
+P.G.G     = projective_fields.G;
+P.G.phi_x = projective_fields.phi_x;
+P.G.phi_g = projective_fields.phi_g;
+P.G.ny    = projective_fields.ny;
+P.I.x     = projective_fields.x;
+P.I.y     = projective_fields.y;
 
 %% error or warn about certain cases
 Check_Parameter_Sanity(P);

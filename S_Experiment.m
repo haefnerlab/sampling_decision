@@ -1,4 +1,4 @@
-function out = S_Experiment(params, varargin)
+function out = S_Experiment(params)
 %S_EXPERIMENT runs the sampling decision model
 %
 %   out = S_Experiment(params) where params has been created by a call to
@@ -7,21 +7,6 @@ function out = S_Experiment(params, varargin)
 
 P = params;
 Check_Parameter_Sanity(P);
-
-% 2x2: two locations, two orientations (NIPS)
-% 1xN: 1 location, many orientations
-% nx2: n locations, two orientations
-% nxN: n locations, many orientations (Current)
-
-% Generative model (TODO - move to S_Exp_Para)
-projective_fields = C_Projection('nxN', P.G.nx, P.G.dimension_X, P.G.dimension_G, P.G.number_locations);
-P.fct = 't-l-op-g-s';
-P.G.G     = projective_fields.G;
-P.G.phi_x = projective_fields.phi_x;
-P.G.phi_g = projective_fields.phi_g;
-P.G.ny    = projective_fields.ny;
-P.I.x     = projective_fields.x;
-P.I.y     = projective_fields.y;
 
 %% local copies of variables with shorter or more descriptive names
 n_trials = P.S.number_repetitions;
