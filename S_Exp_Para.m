@@ -2,8 +2,8 @@ function P = S_Exp_Para(mode, varargin)
 %S_EXP_PARA create parameters struct to be passed into S_Experiment
 %
 %   P = S_EXP_PARA(mode, ...), where mode can be any of 'test_2AFC_corr', 
-%       'debugging', 'top_downs_disabled', 'test_contrast',  'paper_2AFC_PK',
-%       'paper_2AFC_corr', or 'paper_corr_performance'
+%       'debugging', 'top-downs-disabled', 'test-contrast',  'paper-2AFC-PK',
+%       'paper-2AFC-corr', or 'paper-corr-performance'
 %
 %       Further refinement of parameters can be set using varargin, for example:
 %
@@ -33,8 +33,8 @@ P.G.dimension_X = 256;
 P.G.dimension_G = 64;
 P.G.kappa_O = [1 0]; % attended and unattendeds
 P.G.kappa_G = 3;
-P.G.pO = ones(1,P.G.number_orientations)/P.G.number_orientations;
-P.G.pL = ones(1,P.G.number_locations)/P.G.number_locations;
+P.G.pO = ones(1,P.G.number_orientations)/P.G.number_orientations; % orientations prior (uniform)
+P.G.pL = ones(1,P.G.number_locations)/P.G.number_locations; % locations prior (uniform)
 P.G.phi_O = [(0:2:2*(P.G.number_orientations-1));...
              (1:2:2*P.G.number_orientations-1)] * pi/2/P.G.number_orientations;
 P.G.sigmaStyle = 0.1;
