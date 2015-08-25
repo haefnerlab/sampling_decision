@@ -6,13 +6,14 @@ function out = S_Experiment(params, varargin)
 %   the struct 'out'.
 
 P = params;
+Check_Parameter_Sanity(P);
 
 % 2x2: two locations, two orientations (NIPS)
 % 1xN: 1 location, many orientations
 % nx2: n locations, two orientations
 % nxN: n locations, many orientations (Current)
 
-% Generative model
+% Generative model (TODO - move to S_Exp_Para)
 projective_fields = C_Projection('nxN', P.G.nx, P.G.dimension_X, P.G.dimension_G, P.G.number_locations);
 P.fct = 't-l-op-g-s';
 P.G.G     = projective_fields.G;
@@ -22,93 +23,108 @@ P.G.ny    = projective_fields.ny;
 P.I.x     = projective_fields.x;
 P.I.y     = projective_fields.y;
 
-% Repeating Gibbs sampling P.number_repetitions times
-out.X = zeros(P.S.number_repetitions,P.G.number_locations*P.G.dimension_X, P.S.n_samples);
+%% local copies of variables with shorter or more descriptive names
+n_trials = P.S.number_repetitions;
+regime = P.I.stimulus_regime;
+contrast = P.I.stimulus_contrast;
+n_frames = P.I.n_frames;
+im_type = P.I.fct;
+n_locs = P.G.number_locations;
+im_height = P.G.ny;
+n_zero_sig = P.I.n_zero_signal;
+n_neurons = P.G.dimension_X * P.G.number_locations;
+n_pixels = size(P.G.G,1);
 
-% the below two lines are my way of dealing with Matlab's lack of
-% macros. use comments to switch between serial and parallel processing
+% function handle to make a new stimulus
+create_stimulus_handle = @() create_trial_stimulus(regime, im_type, contrast, im_height, n_locs, n_frames, n_zero_sig);
 
-%PARALLEL SUPPORT
-parfor i = 1:P.S.number_repetitions,
-    %warning('serial!!'); for i = 1:P.S.number_repetitions, ProgressReport(10,i-1,P.S.number_repetitions);
+% pre-allocate the return variables
+Signal = zeros(n_trials, n_neurons, n_frames);
+
+%% loop over trials, parallelized over multiple cores if possible
+% (if not, parfor defaults to a backwards for loop)
+parfor i = 1:n_trials
     
     if mod(i,20) == 0
-        disp(['Computing Repetition ' num2str(i) ' / ' num2str(P.S.number_repetitions)]);
-    end
-    switch P.I.stimulus_regime
-        case 'static'
-            signal = P.I.stimulus_contrast;
-        case 'static-delayed'
-            signal(1,:,:) = zeros(size(P.I.stimulus_contrast));
-            signal(2,:,:) = P.I.stimulus_contrast;
-        case 'dynamic-delayed'
-            if P.G.number_locations>1, error('not implemented'); end
-            signal = zeros(P.I.n_frames,1,2);
-            for k = P.I.n_zero_signal+1:P.I.n_frames
-                signal(k,1,:) = P.I.stimulus_contrast;
-            end
-        case {'dynamic-switching-signal','dynamic-switching-signal-blocked'}
-            if P.G.number_locations>1, error('not implemented'); end
-            signal = zeros(P.I.n_frames,P.G.number_locations,2);
-            for k = P.I.n_zero_signal+1:P.I.n_frames
-                on = 1+binornd(1,0.5);
-                signal(k,1,on) = P.I.stimulus_contrast(on);
-            end
-    end
-    switch P.I.stimulus_regime
-        case 'blank'
-            Y = zeros(P.G.ny,P.G.number_locations*P.G.ny);
-        otherwise
-            Y = InputImage(P.I.fct,P.G.number_locations,P.G.ny,signal);
+        disp(['Computing Repetition ' num2str(i) ' / ' num2str(n_trials)]);
     end
     
-    %Perform a trial
-    [aux_X{i} aux_G{i} aux_O{i} aux_L{i} aux_S{i} aux_T{i}] = ...
-        Sampling_Gibbs_InPlace_Fast(P.G, P.S, P.I ,Y);
+    Y = create_stimulus_handle();
     
-    for j = 1:P.G.dimension_X*P.G.number_locations
-        switch P.I.stimulus_regime
-            case {'static','blank'}
-                Signal{i}{j} = mean(mean(Y.*reshape(P.G.G(:,j),P.G.ny,P.G.nx)));
-            case {'static-delayed','dynamic-delayed','dynamic-switching-signal','dynamic-switching-signal-blocked'}
-                for k = 1:P.I.n_frames
-                    Signal{i}{j,k} = mean(mean(squeeze(Y(k,:,:)).*...
-                        reshape(P.G.G(:,j),P.G.ny,P.G.nx)));
-                end
-            otherwise, error(P.I.stimulus_regime);
-        end
+    % Perform a trial
+    % (suppressing warning that P is broadcast.. it's unavoidable)
+    [aux_X{i}, aux_G{i}, aux_O{i}, aux_L{i}, aux_S{i}, aux_T{i}] = ...
+        Sampling_Gibbs_InPlace_Fast(P.G, P.S, P.I ,Y); %#ok<PFBNS>
+    
+    % Signal at trial i, neuron j, frame k is mean convolution of the image
+    % with the neuron's projective field
+    switch regime
+        case {'static', 'blank'}
+            Signal(i,:) = (Y(:)' * P.G.G) / n_pixels;
+        case {'static-delayed','dynamic-delayed','dynamic-switching-signal','dynamic-switching-signal-blocked'}
+            % do convolution at each frame (tmp variable to assist in
+            % parfor slicing)
+            tmp = zeros(n_neurons, n_frames);
+            for k = 1:n_frames
+                tmp(:, k) = (Y(k,:) * P.G.G) / n_pixels;
+            end
+            Signal(i,:) = tmp(:)';
+        otherwise, error(regime);
     end
 end
-out.Signal = zeros(P.S.number_repetitions, P.G.dimension_X*P.G.number_locations, P.I.n_frames);
-for i = P.S.number_repetitions:-1:1
-    %if SAVE_Y, out.Y(i,:,:,:) = Y{i}; end
-    out.X(i,:,:)  =aux_X{i};
+
+%% Copy results to output struct
+out.Signal = Signal;
+for i = n_trials:-1:1
+    out.X(i,:,:)   = aux_X{i};
     out.G(i,:,:,:) = aux_G{i};
-    out.O(i,:,:)  =aux_O{i};
-    out.L(i,:,:)  =aux_L{i};
-    out.T(i,:,:)  =aux_T{i};
-    out.S(i,:)    =aux_S{i};
-    for j = P.G.dimension_X*P.G.number_locations:-1:1
-        switch P.I.stimulus_regime
-            case {'static','blank'}
-                out.Signal(i,j) = Signal{i}{j};
-            case {'static-delayed','dynamic-delayed','dynamic-switching-signal','dynamic-switching-signal-blocked'}
-                for k = P.I.n_frames:-1:1
-                    out.Signal(i,j,k) = Signal{i}{j,k};
-                end
-            otherwise, error(P.I.stimulus_regime);
-        end
-    end
+    out.O(i,:,:)   = aux_O{i};
+    out.L(i,:,:)   = aux_L{i};
+    out.T(i,:,:)   = aux_T{i};
+    out.S(i,:)     = aux_S{i};
 end
 
-%Convert back to single variable P for output, thne perform backwards
-%compatibility handling
-
-
-out.Projection = P; out.InputImage = P.I; out.Sampling = P.S;
+% Rename/alias variables for backwards compatibility with old analysis code
+out.Projection = P;
+out.InputImage = P.I;
+out.Sampling = P.S;
 
 out = BackwardsComp(out);
 
+end
+
+function stim = create_trial_stimulus(regime, im_type, contrast, im_height, n_locs, n_frames, n_zero_sig)
+% helper function to create the stimulus for each trial
+
+if strcmp(regime, 'blank')
+    stim = zeros(im_height, n_locs*im_height);
+    return
+end
+% As long as regime is not 'blank', the image itself changes, drawn
+% from some distribution based on the 'signal', i.e. contrast at
+% each location, which varies sample to sample in the
+% dynamic-switching-* regimes
+switch regime
+    case 'static'
+        signal = contrast;
+    case 'static-delayed'
+        % signal starts as zeros then becomes the stimulus
+        signal(1,:,:) = zeros(size(contrast));
+        signal(2,:,:) = contrast;
+    case 'dynamic-delayed'
+        % starting at n_zero_signal+1, signal starts being dynamic
+        signal = zeros(n_frames,1,2);
+        for frame = n_zero_sig+1:n_frames
+            signal(frame,1,:) = contrast;
+        end
+    case {'dynamic-switching-signal','dynamic-switching-signal-blocked'}
+        signal = zeros(n_frames,1,2);
+        for frame = n_zero_sig+1:n_frames
+            on = 1+binornd(1,0.5);
+            signal(frame,1,on) = contrast(on);
+        end
+end
+stim = InputImage(im_type, n_locs, im_height, signal);
 end
 
 function out = BackwardsComp(out)
