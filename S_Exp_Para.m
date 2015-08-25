@@ -160,6 +160,7 @@ P.G.G     = projective_fields.G;
 P.G.phi_x = projective_fields.phi_x;
 P.G.phi_g = projective_fields.phi_g;
 P.G.ny    = projective_fields.ny;
+P.G.nx    = projective_fields.nx;
 P.I.x     = projective_fields.x;
 P.I.y     = projective_fields.y;
 
