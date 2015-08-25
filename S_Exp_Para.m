@@ -31,7 +31,7 @@ P.G.prior_task = [0 1]; % [cardinal, oblique]
 P.G.number_locations = 1;
 P.G.dimension_X = 256;
 P.G.dimension_G = 64;
-P.G.kappa_O = [1 0]; % attended and unattendeds
+P.G.kappa_O = [1 0]; % attended and unattended
 P.G.kappa_G = 3;
 P.G.pO = ones(1,P.G.number_orientations)/P.G.number_orientations; % orientations prior (uniform)
 P.G.pL = ones(1,P.G.number_locations)/P.G.number_locations; % locations prior (uniform)
@@ -127,7 +127,8 @@ end
 
 %% further process P.I according to stimulus regime
 % P.I.n_frames is how many unique input images to generate, and
-% P.S.access tells the sampler which 'frame' to use at each sample
+% P.S.access tells the sampler which 'frame' to use at each sample:
+% if S.access(i) = k, then we use the input frame k for sample i.
 switch P.I.stimulus_regime
     case {'static','blank'}
         P.I.n_frames = 1;
@@ -157,6 +158,7 @@ end
 projective_fields = C_Projection(P.G.fct, P.G.nx, P.G.dimension_X, P.G.dimension_G, P.G.number_locations);
 P.fct = 't-l-op-g-s';
 P.G.G     = projective_fields.G;
+P.G.R     = -P.G.G' * P.G.G; % useful to precompute this once
 P.G.phi_x = projective_fields.phi_x;
 P.G.phi_g = projective_fields.phi_g;
 P.G.ny    = projective_fields.ny;

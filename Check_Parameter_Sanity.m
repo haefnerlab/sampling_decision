@@ -27,4 +27,8 @@ if max(abs(P.I.stimulus_contrast)) > 0 && P.G.prior_task(1) < P.G.prior_task(2)
     warning('non-zero stim contrasts imply Task = 1, not 2!!');
 end
 
+if sum(abs(diag(P.G.R)+1) > 1e-5)
+    error('R_ii has to be -1!');
+end
+
 end
