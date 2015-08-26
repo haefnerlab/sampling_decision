@@ -37,15 +37,16 @@ P.G.pO = ones(1,P.G.number_orientations)/P.G.number_orientations; % orientations
 P.G.pL = ones(1,P.G.number_locations)/P.G.number_locations; % locations prior (uniform)
 P.G.phi_O = [(0:2:2*(P.G.number_orientations-1));...
              (1:2:2*P.G.number_orientations-1)] * pi/2/P.G.number_orientations;
-P.G.sigmaStyle = 0.1;
 P.G.odds_inc = 1/20; % with 80 samples/sec, every 250ms independent signal
 P.G.delta = .08; % strength of X-G coupling for corr & CPs
 P.G.nT = 2; % number of possible tasks
-P.G.tauStyle = 0.1; % initial value for style
 P.G.number_samples_per_evidence = 2; % for dynamic-switching-signal-blocked
 P.G.task = 'discrimination'; % other option is 'detection'
 P.G.nx = 32; % width of projective field patch
 P.G.fct = 'nxN';
+P.G.prior_style = 'slow'; % or 'sparse'
+P.G.sigmaStyle = 0.1; % deviation of steps in case of slow prior
+P.G.tauStyle = 0.1;   % sparseness in case of sparse prior
 
 % SAMPLER params
 P.S.number_repetitions = 512;    % number of trials

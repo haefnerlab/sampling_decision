@@ -31,4 +31,12 @@ if sum(abs(diag(P.G.R)+1) > 1e-5)
     error('R_ii has to be -1!');
 end
 
+if ~any(strcmp(P.G.prior_style, {'sparse', 'slow'}))
+    error('unknown style prior: %s', P.G.prior_style);
+end
+
+if ~any(strcmp(P.G.task, {'discrimination', 'detection'}))
+    error('unknown task: %s', P.G.task);
+end
+
 end
