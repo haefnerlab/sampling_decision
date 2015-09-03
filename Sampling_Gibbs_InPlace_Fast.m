@@ -1,281 +1,434 @@
-%Images are Ge: Generative Model, S for sampling information, I for Image
-%related information, Image (the image) S.access and zero signal.n
+function [X, G, O, L, Style, Task] = Sampling_Gibbs_InPlace_Fast(Ge, S, I, Image, DBG)
+% SAMPLING_GIBBS_INPLACE_FAST performs gibbs sampling on the given
+% generative model with G and X 'layers' of variables
+%
+%   [X,G,O,L,Style,Task] = SAMPLING_GIBBS_INPLACE_FAST(Ge,S,I,Image,[debug])
+%   Uses the generative model Ge, sampling parameters S, stimulus info I,
+%   and stimulus Image.
+%
+%   Return values are:
+%   - X: a (neurons x samples) array of spike rates of 'X' layer
+%   - G: likewise for the 'G' layer
+%   - O: a (orientations+1 x samples) array where the first row gives sampled values and
+%        rows 2:orientations+1 give the posterior it was drawn from
+%   - L: like 'O' but for locations. (locations+1 x samples),
+%        first row is values rest are posterior
+%   - Task: like ?O? and ?L? for the currently inferred task
+%   - Style: ??? (TODO)
 
-function [X G O L Style Task] = Sampling_Gibbs_InPlace_Fast(Ge, S, I, Image)
 
-% created as fast version of original Sampling_Gibbs_InPlace
-% incorporates S_ConditionalProbs (or at least 'tau' and 'pO_...'
+if nargin < 5, DBG = 0; end
 
-DEBUG=0;
+%% convenient aliases
 
-sigy=1;
+% standard deviation of noise at each pixel (iid)
+sigy = 1;
 
+nL = Ge.number_locations;
+dimX = Ge.dimension_X;
+dimG = Ge.dimension_G;
+% there is one of each X and G at each location
+nX = nL * dimX;
+nG = nL * dimG;
 
-% S.access determines which frames to use in the input
+%% make input image into column vector(s)
+% (one per frame if multiple frames)
 
-
-nI=size(Image);
+nI = size(Image);
 switch length(nI)
     case 2
-        Image=reshape(Image,[numel(Image) 1]);
+        % [width x height] reshape to [npixels x 1]
+        Image = reshape(Image, [numel(Image) 1]);
     case 3
-        aux=zeros(nI(2)*nI(3),nI(1));
-        for i=1:nI(1)
-            aux(:,i)=reshape(Image(i,:,:),[nI(2)*nI(3) 1]);
-        end
-        Image=aux;
+        % [frames x width x height] reshaped to [npixels x frames]
+        Image = reshape(permute(Image, [2,3,1]), [nI(2)*nI(3), nI(1)]);
     otherwise
         error(size(Image));
 end
 
-NX=Ge.number_locations*Ge.dimension_X; % Number of X variables, <>P.nx which is the x-size of the image
+%% Kernel initialization
+% (kernels are storage for intermediate computations, or lookup tables of
+% precomputed probabilities)
 
-R=-Ge.G'*Ge.G; % Ge.G contains projective fields of X
-if sum(abs(diag(R)+1)>1e-5), error('R_ii has to be -1!'); end
-
-% initialization of kernels
-kernel_G=zeros(Ge.dimension_G,Ge.dimension_X);
-C=1/besseli(0,Ge.kappa_G);
-for i=1:Ge.dimension_G
-    for j=1:Ge.dimension_X
-        %kernel_G(i,j)=Ge.delta/Ge.dimension_X*(C*exp(Ge.kappa_G*cos(2*(Ge.phi_x(j)-Ge.phi_g(i))))); % OLD
-        kernel_G(i,j)=Ge.delta*(C*exp(Ge.kappa_G*cos(2*(Ge.phi_x(j)-Ge.phi_g(i))))); % July 9, 2015
+% kernel_G(g,x) is the precomputed circular von Mises functions that give
+% (part of) the relationship E[x|g]:
+% E[x|g] = 1 + delta sum_{k=1}^{n_g} g_k exp(lambda cos 2(phi^x_i-phi^g_k))
+%
+% hence (in mixed notation), E[x|g] = 1 + sum(kernel_G(g=='on', :))
+kernel_G = zeros(dimG, dimX);
+norm_kernel_G = 1 / besseli(0, Ge.kappa_G);
+for k = 1:dimG
+    for l = 1:dimX
+        % note that kappa_G is referred to as lambda in the text
+        % (TODO be more consistent about naming)
+        kernel_G(k,l) = norm_kernel_G * Ge.delta * ...
+            exp(Ge.kappa_G * cos(2*(Ge.phi_x(l) - Ge.phi_g(k))));
     end
 end
-% check for worst case scenario
-%aux=zeros(1,Ge.dimension_G); aux(kernel_G(:,1)<0)=1;
-%if aux*kernel_G(:,1)<1, error('kernel too negative!'); end
-%
-kernel_O=zeros([2 Ge.nT, Ge.number_orientations Ge.dimension_G]);
-% 1st dim: 1 at attended location, 2 different location
-C1=1/besseli(0,Ge.kappa_O(1))/Ge.dimension_G;
-C2=1/besseli(0,Ge.kappa_O(2))/Ge.dimension_G;
-for T=1:Ge.nT
-    for O=1:Ge.number_orientations
-        switch Ge.task
-            case 'discrimination', delta_cos=cos(2*(Ge.phi_O(T,O)-Ge.phi_g));
-            case 'detection'
-                if O==1,             delta_cos=0; % stimulus absent
-                else                 delta_cos=cos(2*(Ge.phi_O(T,O)-Ge.phi_g));
-                end
+
+% kernel_O(attended, which_task, which_O, g) is the precomputed circular
+% von Mises functions which give the probability that 'g' is 1 given its
+% graphical-model-parents (whether it's in the attended location, which
+% task is being performed, and the current Orientation belief)
+
+% dimension 1 is [attended, unattended], the rest are self-explanatory
+kernel_O = zeros([2 Ge.nT, Ge.number_orientations dimG]);
+% normalization such that sum over g of p(g | O) is 1 (on average one g is
+% 'on' at a time)
+norm_kernel_O = 1 ./ besseli(0, Ge.kappa_O) / dimG;
+for T = 1:Ge.nT
+    for O = 1:Ge.number_orientations
+        if O == 1 && strcmp(Ge.task, 'detection')
+            delta_cos = 0; % stimulus absent
+        else
+            % same for 'discrimination' and 'detection' tasks here
+            delta_cos = cos(2 * (Ge.phi_O(T,O) - Ge.phi_g));
         end
-        kernel_O(1,T,O,:)=1*C1*exp(Ge.kappa_O(1)*delta_cos);
-        kernel_O(2,T,O,:)=1*C2*exp(Ge.kappa_O(2)*delta_cos);
+        
+        % the difference between attended and unattended is in the width of
+        % the von Mises, controlled by kappa_O (see S_Exp_Para)
+        kernel_O(1,T,O,:) = norm_kernel_O(1) * exp(Ge.kappa_O(1)*delta_cos);
+        kernel_O(2,T,O,:) = norm_kernel_O(2) * exp(Ge.kappa_O(2)*delta_cos);
     end
 end
-kernel_O(kernel_O>1)=1;
+kernel_O(kernel_O > 1) = 1;
 
-% initialization of samples
-pO=Ge.pO; pL=Ge.pL; prior_task=Ge.prior_task;
+%% initialization and allocation of variables
 
-X=zeros(NX,S.n_samples); %
-G=zeros(Ge.number_locations,Ge.dimension_G,S.n_samples);
-Style=zeros(1,S.n_samples);
-L=zeros(   1,S.n_samples);
-Style(1)=1; % start with Olshausen & Field
-X=zeros(NX, S.n_samples); %
-G=zeros(Ge.number_locations,Ge.dimension_G, S.n_samples);
-Style=zeros(1,S.n_samples);
-L=zeros(   1,S.n_samples);
-Style(1)=Ge.tauStyle; % start with prior mean
+% pO, pL, prior_task are our priors
+pO = Ge.pO;
+pL = Ge.pL;
+prior_task = Ge.prior_task;
 
+X     = zeros(nX, S.n_samples); % X is a flattened [nL, dimX] matrix
+G     = zeros(nL, dimG, S.n_samples);
+Style = zeros(1, S.n_samples);
+% Note: the three _Posterior variables are concatenated (along
+% dimension 1) into Task, O, and L after all the sampling is done
+% (i.e. in the return values, O(1,:) is the sampled orientation and
+% O(2:end,:) is pO_Posterior, likewise for task and L)
+L     = zeros(1, S.n_samples);
+O     = zeros(1, S.n_samples);
+Task  = zeros(1, S.n_samples);
+pL_Posterior = zeros(nL, S.n_samples);
+pO_Posterior = zeros(Ge.number_orientations, S.n_samples);
+pT_Posterior = zeros(Ge.nT, S.n_samples);
 
+%% Draw initial values from priors
+% starting at the top with L, O, Task.. then G.. then X
 
-L(1)=find(cumsum(pL)>rand(1),1,'first');
-O=zeros(1,S.n_samples); % 1st: sample, 2nd: ratio 2/1
-O(1)=find(mnrnd(1,pO)==1,1); %1+binornd(1,pO(2));
-pO_Posterior=zeros(Ge.number_orientations,S.n_samples);
-pO_Posterior(:,1)=pO;
-Task =zeros(1,S.n_samples); % 1st: sample, 2nd: ratio 2/1
-prior_task_Posterior=zeros(Ge.nT,S.n_samples);
-prior_task_Posterior(:,1)=prior_task;
-pL_Posterior=zeros(Ge.number_locations,S.n_samples);
-pL_Posterior(:,1)=pL;
-Task(1)=find(mnrnd(1,prior_task)==1,1); %1+binornd(1,prior_task(2));
+Style(1) = Ge.tauStyle; % start with prior mean
+% find() of cumsum()>rand is the discrete version of inverting the cdf to
+% draw a sample from the prior
+L(1)    = find(cumsum(pL) > rand(1), 1, 'first');
+O(1)    = find(mnrnd(1,pO) == 1, 1);
+Task(1) = find(mnrnd(1,prior_task) == 1, 1);
+pL_Posterior(:,1) = pL;
+pO_Posterior(:,1) = pO;
+pT_Posterior(:,1) = prior_task;
 
+G(:,:,1) = init_G(kernel_O, Task(1), O(1), L(1), nG, nL, dimG);
+X(:,1)   = init_X(kernel_G, G(:,:,1), Ge.delta, nX, dimX);
 
-i=1; % first sample
-% --------- sampling G's---------------
-%
-order=randperm(Ge.number_locations*Ge.dimension_G); % randomize update order for G
-for jk=order, [j k]=ind2sub([Ge.number_locations Ge.dimension_G],jk);
-    if L(i)==j, iL=1; else iL=2; end
-    prob=kernel_O(iL,Task(1,i),O(1,i),k);
-    G(j,k,i)=binornd(1,prob,1); % 0 or 1
-end
-% --------- sampling X's---------------
-for k=1:NX % current X to be sampled, order doesn't make a difference!
-    kO=mod(k-1,Ge.dimension_X)+1; % index of current Gabor orientation
-    kL=1+(k-kO)/Ge.dimension_X; % index of current location
-    tau=1+G(kL,:,i)*kernel_G(:,kO); % simplification July 2013
-    %tau=Ge.delta+G(kL,:,i)*kernel_G(:,kO); % modification July 2015
-    X(k,i)=exprnd(tau);
-end
-% Gibbs sampling ---------------------------------------------------------
+%% Gibbs sampling
 
-for i=2:S.n_samples
+for samp = 2:S.n_samples
     % Copy entire current state forward by 1 step
-    X(:,i)=X(:,i-1);
-    G(:,:,i)=G(:,:,i-1);
-    O(:,i)=O(:,i-1);
-    L(:,i)=L(:,i-1);
-    Task(:,i)=Task(:,i-1);
-    Style(:,i)=Style(:,i-1);
-    pO_Posterior(:,i)=pO_Posterior(:,i-1);
-    pL_Posterior(:,i)=pL_Posterior(:,i-1);
-    prior_task_Posterior(:,i)=prior_task_Posterior(:,i-1);
+    X(:,samp) = X(:,samp-1);
+    G(:,:,samp) = G(:,:,samp-1);
+    O(:,samp) = O(:,samp-1);
+    L(:,samp) = L(:,samp-1);
+    Task(:,samp) = Task(:,samp-1);
+    Style(:,samp) = Style(:,samp-1);
+    pO_Posterior(:,samp) = pO_Posterior(:,samp-1);
+    pL_Posterior(:,samp) = pL_Posterior(:,samp-1);
+    pT_Posterior(:,samp) = pT_Posterior(:,samp-1);
     
+    % Get Image for this sample
+    cur_Image = Image(:, S.access(samp));
     
-    % UPDATE X
-    order=randperm(NX); % randomize update order for X
-    for k=order % current X to be sampled
-        idx_no_k=[1:k-1 k+1:NX]; % all but k index
-        sigk=sigy/Style(i); % realized July 2013
-        kO=mod(k-1,Ge.dimension_X)+1; % index of current Gabor orientation
-        kL=1+(k-kO)/Ge.dimension_X; % index of current location
-        tau=1+S.alpha*G(kL,:,i)*kernel_G(:,kO); % simplification July 2013
-        %tau=Ge.delta+G(kL,:,i)*kernel_G(:,kO); % modification July 2015
-        if tau<=0, error(['tau<=0']); end
-        muk=Style(i)*Ge.G(:,k)'*Image(:,S.access(i))+Style(i)^2*R(k,idx_no_k)*X(idx_no_k,i)-sigy^2/tau; % my calc - confirmed by PB
-        muk=muk/Style(i)^2; % realized July 2013
-        X(k,i)=Cut_Gaussian('random',muk,sigk,1);
-        if ~isreal(X(k,i)), error(['X NaN, mu sigma: ' num2str([muk sigk])]); end
-    end
-    % UPDATE everything else
-    
-    
-    % UPDATE G ------------------------------------------
-    order=randperm(Ge.number_locations*Ge.dimension_G); % randomize update order for G
-    for jk=order, [j k]=ind2sub([Ge.number_locations Ge.dimension_G],jk);
-        %pG=S_ConditionalProbs('pG_kgTLOx',[j k],G(:,:,i),Task(1,i),L(i),O(1,i),X(:,i),phi_O,phi_g,P);
-        if L(i)==j, iL=1; else iL=2; end
-        prob= (kernel_O(iL,Task(1,i),O(1,i),k) + (1.0-S.alpha) * sum( kernel_O(iL, Task(1, i), :, k)) - (1.0-S.alpha)*kernel_O(iL,Task(1,i),O(1,i),k)); % + the sum of all other decisions scaled by alpha
-        GG=G(:,:,i);
-        aux=zeros(1,2);
-        for glk=[0 1]
-            GG(j,k)=glk;
-            switch glk
-                case 0, aux(1)=log(1-prob); % grating off
-                case 1, aux(2)=log(prob); % grating is on
-            end
-            tau=1+ (GG(j,:)*kernel_G)'; %Took out S.alpha scaling since it is tied to the G here.
-            %tau=Ge.delta+(GG(j,:)*kernel_G)'; % modification July 2015
-            aux(1+glk);
-            aux(1+glk)=aux(1+glk)- sum(log(tau)+X((j-1)*Ge.dimension_X+(1:Ge.dimension_X),i)./tau);
-            
-            %ERROR HANDLING
-            if ~isreal(aux(1+glk))
-                disp(['tau : ' num2str(tau')]);
-                disp(['aux : ' num2str(aux)]);
-                disp(['sum(.): ' num2str((log(tau)+X((j-1)*Ge.dimension_X+(1:Ge.dimension_X),i)./tau)')]);
-                error('aux NaN');
-            end
-            
-        end
-        
-        
-        aux=exp(aux-max(aux));
-        
-        
-        pG=aux/sum(aux);
-        
-        %ERROR HANDLING
-        if sum(~isreal(pG))>0,
-            disp(['tau : ' num2str(tau')]);
-            disp(['aux : ' num2str(aux)]);
-            error('pG NaN');
-        end
-        
-        if pG(2)>1, error('pG(2)>1'); end
-        
-        
-        
-        G(j,k,i)=binornd(1,pG(2),1); % 0 or 1
-    end
-    
-    
-    %G(1,:,i)=[0 0 0 0]; % useful for debugging! seems to work!
-    % UPDATE O ------------------------------------------
-    % first prior (posterior from last time step)
-    if i>I.n_zero_signal % accumulate evidence after signal starts
-        pO=pO_Posterior(:,i)'; % use exact posterior
-        pL=pL_Posterior(:,i)';
-        prior_task=prior_task_Posterior(:,i)';
+    % Update priors (accumulated evidence after signal starts)
+    if samp > I.n_zero_signal
+        % previous posterior is current prior
+        pO = pO_Posterior(:,samp)';
+        pL = pL_Posterior(:,samp)';
+        prior_task = pT_Posterior(:,samp)';
     else
-        pO=Ge.pO; % initial prior (same one, no accumulation)
-        pL=Ge.pL;
-        prior_task=Ge.prior_task;
+        % if no signal, just use initial prior
+        pO = Ge.pO;
+        pL = Ge.pL;
+        prior_task = Ge.prior_task;
     end
-    if max(pO)<1 % uncertainty left about O
-        log_like_O=zeros(Ge.number_orientations,1);
-        for j=1:Ge.number_locations
-            if L(i)==j, jL=1; else jL=2; end
-            log_like_O=log_like_O...
-                +squeeze(sum(log(1-kernel_O(jL,Task(i),:,G(j,:,i)==0)),4))... % grating off
-                +squeeze(sum(log(  kernel_O(jL,Task(i),:,G(j,:,i)==1)),4));   % grating on
-            log_pO=Ge.odds_inc*log_like_O'+log(pO);
-            pO=exp(log_pO-max(log_pO)); pO=pO/sum(pO);
-        end
-    end
-    pO_Posterior(:,i)=pO;
-    if DEBUG, disp(['i pO: ' num2str([i pO])]); end
-    if sum(isnan(pO))>0, error(num2str(pO)); end
-    O(1,i)=find(mnrnd(1,pO)==1,1); %1+binornd(1,pO(2),1);
-    % UPDATE L -------------------------------------------
-    if max(pL)<1 % uncertainty left
-        log_like_L=[0 0];
-        for LL=1:Ge.number_locations
-            for j=1:Ge.number_locations
-                if LL==j, jL=1; else jL=2; end
-                log_like_L(LL)=log_like_L(LL)...
-                    +sum(log(1-kernel_O(jL,Task(i),O(i),G(j,:,i)==0)))...
-                    +sum(log(  kernel_O(jL,Task(i),O(i),G(j,:,i)==1)));
-            end
-        end
-        log_pL=Ge.odds_inc*log_like_L+log(pL);
-        pL=exp(log_pL-max(log_pL)); pL=pL/sum(pL);
-    end
-    pL_Posterior(:,i)=pL;
-    L(i)=find(cumsum(pL)>rand(1),1,'first');
-    % UPDATE Task ----------------------------------------
-    if max(prior_task)<1 % uncertainty left about Task
-        %log_like_T=S_ConditionalProbs('log_prior_task_gLO',G(:,:,i),L(i),O(1,i),phi_O,phi_g,P);
-        log_like_T=[0 0];
-        for j=1:Ge.number_locations
-            if L==j, jL=1; else jL=2; end
-            log_like_T=log_like_T...
-                +squeeze(sum(log(1-kernel_O(jL,:,O(i),G(j,:,i)==0)),4))...
-                +squeeze(sum(log(  kernel_O(jL,:,O(i),G(j,:,i)==1)),4));
-        end
-        log_prior_task=Ge.odds_inc*log_like_T+log(prior_task);
-        prior_task=exp(log_prior_task-max(log_prior_task)); prior_task=prior_task/sum(prior_task);
-    end
-    prior_task_Posterior(:,i)=prior_task;
-    if DEBUG, disp(['i prior_task: ' num2str([i prior_task])]); end
-    Task(i)=find(mnrnd(1,prior_task)==1,1); %1+binornd(1,prior_task(2),1); % 1 or 2
-    % UPDATE Style ---------------------------------------
-    xRx=X(:,i)'*R*X(:,i); if xRx>0, error('xRx must be <0!'); end
-    yGx=Image(:,S.access(i))'*Ge.G*X(:,i);
-    if 0 % sparse prior
-        sigs=sigy/sqrt(-xRx);
-        mus=(yGx/sigy^2-1/Ge.tauStyle)*sigy^2/(-xRx);
-    else % slow prior
-        sigs=sqrt(1/(1/Ge.sigmaStyle^2-xRx/sigy^2));
-        mus=sigs^2*(yGx/sigy^2+Style(i)/Ge.sigmaStyle^2);
-    end
-    Style(i)=Cut_Gaussian('random',mus,sigs,1);
+    
+    % Update X
+    X(:,samp) = sample_X(cur_Image, Ge, kernel_G, X(:,samp), G(:,:,samp), ...
+        Style(1,samp), sigy, S.alpha, nX, dimX);
+    
+    % Update G
+    G(:,:,samp) = sample_G(kernel_O, kernel_G, G(:,:,samp), X(:,samp), ...
+        Task(1,samp), O(1,samp), L(1,samp), S.alpha, nL, dimG, dimX);
+    
+    % Update O
+    [O(1,samp), pO_Posterior(:,samp)] = ...
+        sample_O(kernel_O, Ge, G(:,:,samp), L(1,samp), Task(1,samp), pO, nL);
+    if DBG, disp(['i pO: ' num2str([samp pO_Posterior(:,samp)])]); end
+    
+    % Update L
+    [L(1,samp), pL_Posterior(:,samp)] = ...
+        sample_L(kernel_O, Ge, G(:,:,samp), Task(1,samp), O(1,samp), pL, nL);
+    
+    % Update Task
+    [Task(1,samp), pT_Posterior(:,samp)] = ...
+        sample_Task(kernel_O, Ge, G(:,:,samp), O(1,samp), L(1,samp), prior_task);
+    if DBG, disp(['i prior_task: ' num2str([samp pT_Posterior(:,samp)])]); end
+    
+    % Update Style
+    Style(:,samp) = sample_Style(Ge, Style(:,samp), X(:,samp), cur_Image, sigy);
+    
 end
 
-if DEBUG
+if DBG
     Get_Figure('Post-debug'); plot(pO_Posterior(2,:),'*-');
 end
-if DEBUG
+if DBG
     Get_Figure('1'); Subplot(2,1,2,1);
     Histogram(TAU);
     Subplot(2); Histogram(MUK);
 end
 
-O   (2:1+Ge.number_orientations,:)=pO_Posterior;
-Task(2:1+Ge.nT,:)=prior_task_Posterior;
-L   (2:1+Ge.number_locations,:)=pL_Posterior;
-%disp('end Gibbs sampling');
+disp(size(O)) % 1xn_samples
+
+O   (2:1+Ge.number_orientations,:) = pO_Posterior;
+Task(2:1+Ge.nT,:) = pT_Posterior;
+L   (2:1+nL,:) = pL_Posterior;
+
+end
+
+function newX = sample_X(img, Ge, kernel_G, X, G, s, sigy, alpha, nX, dimX)
+%SAMPLE_X do a Gibbs sampling step on a random order of all X variables
+
+newX = X;
+% randomize update order for X
+order = randperm(nX);
+% X_k to be sampled
+for i = order
+    % x is drawn from a 'cut gaussian' with mean mu and variance sig^2
+    % TODO - where did R_ii go (eqns 18-20 in 'ff vs fb' document)? Did we
+    % ensure that each projective field has an L2 norm of 1?
+    idx_no_i = [1:i-1 i+1:nX]; % all but i index
+    sig = sigy / s;
+    kO  = mod(i-1, dimX)+1;  % index of X_i's Gabor orientation
+    kL  = 1 + (i-kO) / dimX; % index of X_i's location
+    % 0<=alpha<=1 controls the strength of top-down influence (of G on X)
+    tau = 1 + alpha * G(kL,:) * kernel_G(:,kO); % see def of kernel_G
+    if tau <= 0, error('in sampling x_i, got tau_i <= 0'); end
+    mu = s * Ge.G(:,i)' * img + ...
+        s^2 * Ge.R(i,idx_no_i) * newX(idx_no_i) - ...
+        sigy^2 / tau;
+    mu = mu / s^2;
+    newX(i) = Cut_Gaussian('random', mu, sig);
+    if ~isreal(newX(i)), error(['X NaN, mu sigma: ' num2str([mu sig])]); end
+end
+end
+
+function newG = sample_G(kernel_O, kernel_G, G, X, T, O, L, alpha, nL, dimG, dimX)
+%SAMPLE_G do a Gibbs sampling step on a random order of all g variables
+
+newG = G;
+
+% unflatten X for easy slicing later
+% (X is stored with the orientations dimension contiguous)
+X = reshape(X, [dimX, nL]);
+
+% randomize update order for G
+order = randperm(nL * dimG);
+for jk = order, [l, k] = ind2sub([nL dimG], jk);
+    if L == l, attn = 1; else attn = 2; end
+    % p(g|...) factorizes to p(g|D,T,O)p(x|g)
+    % p_g_topdown gets us p(g|D,T,O) with 'alpha controlling the strength
+    % of this top-down influence
+    %
+    % note that (1-alpha)*(sum over all orientations except O) is
+    % implemented as [(1-alpha)*(sum over all) - (1-alpha)(just O)]
+    p_g_topdown = kernel_O(attn, T, O, k) + ...
+        (1.0 - alpha) * sum(kernel_O(attn, T, :, k)) - ...
+        (1.0 - alpha) * kernel_O(attn, T, O, k);
+    
+    % now we get the 'bottom up' effect of x on g. To do this, we consider
+    % both cases, G(j,k) = 0 or 1, in terms of their relative likelihood
+    % of producing X
+    log_p_each_case = zeros(1,2); % log probability when G(j,k) is 0,1 respectively
+    for Gjk_val = [0 1], case_idx = Gjk_val+1;
+        
+        % set G to this case to see what likelihoods we get
+        newG(l,k) = Gjk_val;
+        
+        % if G(g,k) is 'off', the top-down likelihood is 1-p_g_topdown
+        switch Gjk_val
+            case 0, log_p_each_case(1) = log(1-p_g_topdown);
+            case 1, log_p_each_case(2) = log(p_g_topdown);
+        end
+        
+        % 'tau' is the expected value of x given g, defined mathematically
+        %   E[x|g] = 1 + delta sum_{k=1}^{n_g} g_k exp(lambda cos 2(phi^x_i-phi^g_k))
+        % where kernel_G(k,i) contains
+        %   delta * exp(lambda cos 2(phi^x_i-phi^g_k))
+        %
+        % so tau = E[x|g] is just 1 + (dot product of current G with kernel)
+        tau = 1 + (newG(l,:) * kernel_G)';
+        
+        % x|g is drawn from an exponential distribution with mean 'tau', so
+        % its log-likelihood is -log(tau) - x/tau
+        log_p_each_case(case_idx) = ...
+            log_p_each_case(case_idx) + ...
+            sum(-log(tau) - X(:,l)./tau);
+    end
+    
+    % return from log-probability to probability space in a relatively
+    % numerically stable way (avoiding exp(very_very_negative_number))
+    pG = exp(log_p_each_case-max(log_p_each_case));
+    pG = pG / sum(pG);
+    
+    %ERROR HANDLING
+    if any(~isreal(pG))
+        disp(['tau : ' num2str(tau')]);
+        disp(['aux : ' num2str(log_p_each_case)]);
+        error('NaN probability p(G|...)');
+    end
+    
+    if pG(2)>1, error('p(g=1|...) > 1'); end
+    
+    % new weighted coin flip for G (pG(2) contains prob G is 1)
+    newG(l,k) = binornd(1, pG(2), 1);
+end
+end
+
+function [newO, pO] = sample_O(kernel_O, Ge, G, L, T, pO, nL)
+%UPDATE_O compute new posterior over O and take a sample
+%
+% P(O|G,..) \propto P(G|O,..)P(O) = pO * product_k P(g_k|O,..)
+%
+% where kernel_O has much of the joint P(attending, T, O, G) precomputed
+
+% TODO - O, T, and L are interdependent - do we really want to stop updating when pO reaches 1? Will it ever reach 1?
+if max(pO) < 1 % there is some uncertainty left about O
+    log_like_O = zeros(size(pO))';
+    for l = 1:nL
+        if L == l, attn = 1; else attn = 2; end
+        
+        % log(P(O|G)) sum over G dimension of log kernels
+        log_like_O = log_like_O ...
+            +squeeze(sum(log(1-kernel_O(attn, T, :, G(l,:)==0)),4)) ...
+            +squeeze(sum(log(  kernel_O(attn, T, :, G(l,:)==1)),4));
+        
+        % take a step moving log_pO towards log_like_O
+        log_pO = Ge.odds_inc * log_like_O' + log(pO);
+        % return from log-probability to probability space in a relatively
+        % numerically stable way (avoiding exp(very_very_negative_number))
+        pO = exp(log_pO-max(log_pO));
+        pO = pO / sum(pO);
+    end
+end
+if any(isnan(pO)), error(['NaN value in posterior over O.. ' num2str(pO)]); end
+% sample guessed orientation: a multinomial random draw
+newO = find(mnrnd(1,pO) == 1, 1);
+end
+
+function [newL, pL] = sample_L(kernel_O, Ge, G, T, O, pL, nL)
+%UPDATE_L compute new posterior over L and take a sample
+
+if max(pL) < 1 % there is some uncertainty left about L
+    log_like_L = zeros(size(pL))';
+    % compute posterior at each location L
+    for L = 1:nL
+        % requires a nested loop because in order to check each candidate
+        % value for L we must see how it affects likelhiood G at all other
+        % locations
+        for l = 1:nL
+            if L == l, attn = 1; else attn = 2; end
+            log_like_L(L) = log_like_L(L)...
+                +squeeze(sum(log(1-kernel_O(attn, T, O, G(l,:) == 0)),4))...
+                +squeeze(sum(log(  kernel_O(attn, T, O, G(l,:) == 1)),4));
+        end
+    end
+    
+    % take a step moving log_pL towards log_like_L
+    log_pL = Ge.odds_inc * log_like_L' + log(pL);
+    % return from log-probability to probability space in a relatively
+    % numerically stable way (avoiding exp(very_very_negative_number))
+    pL = exp(log_pL - max(log_pL));
+    pL = pL / sum(pL);
+end
+% sample a guessed location according to weighted posterior
+newL = find(cumsum(pL) > rand(1), 1, 'first');
+end
+
+function [newT, pT] = sample_Task(kernel_O, Ge, G, O, L, pT)
+%SAMPLE_TASK compute new posterior over Task and take a sample
+
+if max(pT) < 1 % there is some uncertainty left about Task
+    log_like_T = zeros(size(pT))';
+    
+    for l = 1:nL
+        if L == l, attn = 1; else attn = 2; end
+        log_like_T = log_like_T...
+            +squeeze(sum(log(1-kernel_O(attn,:,O(samp),G(l,:,samp) == 0)),4))...
+            +squeeze(sum(log(  kernel_O(attn,:,O(samp),G(l,:,samp) == 1)),4));
+    end
+    
+    % take a step moving log_pT towards log_like_T
+    log_prior_task = Ge.odds_inc * log_like_T' + log(pT);
+    % return from log-probability to probability space in a relatively
+    % numerically stable way (avoiding exp(very_very_negative_number))
+    pT = exp(log_prior_task-max(log_prior_task));
+    pT = pT/sum(pT);
+end
+newT = find(mnrnd(1, pT) == 1, 1);
+end
+
+function newStyle = sample_Style(Ge, Style, X, img, sigy)
+% SAMPLE_STYLE sample a new value for the 'style' or 's' variable
+
+xRx = X' * Ge.R * X;
+if xRx > 0, error('xRx must be <0!'); end
+
+yGx = img' * Ge.G * X;
+% TODO - avoid switching every loop iteration. Not like prior_style is changing..
+switch Ge.prior_style
+    case 'sparse'
+        sigs = sigy / sqrt(-xRx);
+        mus = (yGx/sigy^2 - 1/Ge.tauStyle) * sigy^2/(-xRx);
+    case 'slow'
+        sigs = sqrt(1 / (1/Ge.sigmaStyle^2 - xRx/sigy^2));
+        mus = sigs^2 * (yGx/sigy^2 + Style/Ge.sigmaStyle^2);
+end
+newStyle = Cut_Gaussian('random', mus, sigs);
+end
+
+function newG = init_G(kernel_O, Task, O, L, nG, nL, dimG)
+%INIT_G draw initial values for G based on inital values of O and L
+
+newG = zeros(nL, dimG);
+% order doesn't matter for initialization
+for jk = 1:nG
+    [l, k] = ind2sub([nL, dimG], jk);
+    % if the location matches, use 'attended' kernel (slice 1) otherwise
+    % the 'unattended' kernel (slice 2)
+    if L == l, attn = 1; else attn = 2; end
+    prob = kernel_O(attn, Task, O, k);
+    newG(l,k) = binornd(1,prob,1); % 0 or 1
+end
+end
+
+function newX = init_X(kernel_G, G, delta, nX, dimX)
+%INIT_X draw initial values for X based on inital values of G
+
+% order doesn't matter for initialization
+for i = nX:-1:1
+    iO = mod(i-1, dimX) + 1; % unflatten index (col, orientation)
+    iL = 1 + (i-iO) / dimX;  % unflatten index (row, location)
+    % tau(i) = 1 + G(kL,:) * kernel_G(:, kO); % OLD version
+    tau(i) = delta + G(iL,:) * kernel_G(:, iO);
+end
+newX = exprnd(tau);
+end
