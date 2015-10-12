@@ -20,7 +20,7 @@ orient_responses = struct('orientation', mat2cell(orientations, ones(n_orient,1)
 slices = eye(n_orient);
 I = struct('n_zero_signal', 0);
 
-for o_idx=1:n_orient
+parfor o_idx=1:n_orient
     o = orientations(o_idx);
     orient_responses(o_idx).orientation = o;
     img = InputImage('1xN', Ge.ny, n_orient, slices(o_idx,:));
