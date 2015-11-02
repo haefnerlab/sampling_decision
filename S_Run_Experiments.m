@@ -22,6 +22,9 @@ else
     para = S_Exp_Para('paper-corr-performance');
 end
 
+savedir = pwd;
+if isfield(para, 'savedir'), savedir = para.savedir; end
+
 switch fct
     
     case 'contrast'
@@ -64,7 +67,7 @@ switch fct
             end
             if added_something
                 disp('saving intermediate results...');
-                save('zwischenstand_S_Run_Experiment.mat','e','-v7.3');
+                save(fullfile(savedir, 'zwischenstand_S_Run_Experiment.mat'),'e','-v7.3');
             end
         end
         varargout{1}=e;

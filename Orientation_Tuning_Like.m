@@ -7,7 +7,7 @@ function [ models_tuning ] = Orientation_Tuning_Like( e, n_orient, trials )
 models_tuning = cell(size(e));
 
 for i=1:numel(e)
-    model = e{i};
+    model = e{i}
     models_tuning{i} = Orientation_Tuning_Response(model.Projection, model.Sampling, n_orient, trials);
 end
 
