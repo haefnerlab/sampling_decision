@@ -7,7 +7,8 @@ function [ orient_responses ] = Orientation_Tuning_Response( Ge, S, n_orient, tr
 
 assert(Ge.number_locations == 1, 'Tuning Response only works for a single location at the moment');
 
-orientations = linspace(0,180,n_orient)';
+orientations = linspace(0,180,n_orient+1)';
+orientations = orientations(1:end-1);
 
 orient_responses = struct('orientation', mat2cell(orientations, ones(n_orient,1)), ...
     'X', zeros(Ge.dimension_X, S.n_samples, trials), ...
@@ -23,7 +24,7 @@ I = struct('n_zero_signal', 0);
 parfor o_idx=1:n_orient
     o = orientations(o_idx);
     orient_responses(o_idx).orientation = o;
-    img = InputImage('1xN', Ge.ny, n_orient, slices(o_idx,:));
+    [~,img] = InputImage('1xN', Ge.ny, n_orient, slices(o_idx,:));
     for t=1:trials
         fprintf('O %d/%d\tT %d/%d\n', o_idx, n_orient, t, trials);
         [X, G, O, L, St, T] = Sampling_Gibbs_InPlace_Fast(Ge, S, I, img);
