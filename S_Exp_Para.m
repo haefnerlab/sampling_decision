@@ -3,7 +3,7 @@ function P = S_Exp_Para(mode, varargin)
 %
 %   P = S_EXP_PARA(mode, ...), where mode can be any of 'test_2AFC_corr', 
 %       'debugging', 'top-downs-disabled', 'test-contrast',  'paper-2AFC-PK',
-%       'paper-2AFC-corr', or 'paper-corr-performance'
+%       'paper-2AFC-corr', 'paper-corr-performance', or 'cb'
 %
 %       Further refinement of parameters can be set using varargin, for example:
 %
@@ -40,7 +40,7 @@ P.G.phi_O = [(0:2:2*(P.G.number_orientations-1));...
 P.G.odds_inc = 1/20; % with 80 samples/sec, every 250ms independent signal
 P.G.delta = .08; % strength of X-G coupling for corr & CPs
 P.G.nT = 2; % number of possible tasks
-P.G.number_samples_per_evidence = 2; % for dynamic-switching-signal-blocked
+P.G.number_samples_per_evidence = 2; % for dynamic-switching-signal-blocked or dynamic-shuffled-signal-blocked
 P.G.task = 'discrimination'; % other option is 'detection'
 P.G.nx = 32; % width of projective field patch
 P.G.fct = 'nxN';
@@ -60,9 +60,24 @@ P.I.fct = 'nx2';
 P.I.stimulus_regime = 'static';
 P.I.n_zero_signal = 20; % number of frames before onset of stimulus
 P.I.stimulus_contrast = zeros(1,P.G.number_orientations);
+P.I.signal_match_probability = 0.5; % p(on) each frame for dynamic-* signal regimes
 
 %% Specialize default values based on mode
 switch mode
+    case 'cb'
+        P.G.dimension_X = 100;
+        P.G.dimension_G = 30;
+        P.G.prior_task = [1 0];
+        P.S.number_repetitions = 500;
+        P.I.stimulus_regime = 'dynamic-shuffled-signal-blocked';
+        P.I.signal_match_probability = 0.8;
+        P.I.stimulus_contrast = ones(1,P.G.number_orientations);
+        P.G.number_samples_per_evidence = 5;
+        % Note: performance tradeoff controlled in the stimulus using
+        % tradeoff of sensory info (P.I.stimulus_contrast) versus category
+        % info (P.I.signal_match_probability). In the generative model, the
+        % corresponding fields are 
+
     case 'paper-2AFC-corr'
         P.G.dimension_X = 1024;
         P.G.dimension_G = 256;
@@ -138,10 +153,10 @@ switch P.I.stimulus_regime
         P.I.n_frames = 2;
         P.S.access = ones(1,P.S.n_samples);
         P.S.access(P.I.n_zero_signal+1:end) = 2;
-    case {'dynamic-delayed', 'dynamic-switching-signal'}
+    case {'dynamic-delayed', 'dynamic-switching-signal', 'dynamic-shuffled-signal'}
         P.I.n_frames = P.S.n_samples;
         P.S.access = 1:P.S.n_samples;
-    case 'dynamic-switching-signal-blocked'
+    case {'dynamic-switching-signal-blocked', 'dynamic-shuffled-signal-blocked'}
         zs = P.I.n_zero_signal+1;
         ns = P.S.n_samples;
         spe = P.G.number_samples_per_evidence;

@@ -19,9 +19,10 @@ im_height = P.G.ny;
 n_zero_sig = P.I.n_zero_signal;
 n_neurons = P.G.dimension_X * P.G.number_locations;
 n_pixels = size(P.G.G,1);
+match_prob = P.I.signal_match_probability;
 
 % function handle to make a new stimulus
-create_stimulus_handle = @() create_trial_stimulus(regime, im_type, contrast, im_height, n_locs, n_frames, n_zero_sig);
+create_stimulus_handle = @() create_trial_stimulus(regime, im_type, contrast, im_height, n_locs, n_frames, n_zero_sig, match_prob);
 
 % pre-allocate the return variables
 Signal = zeros(n_trials, n_neurons, n_frames);
@@ -46,7 +47,7 @@ parfor i = 1:n_trials
     switch regime
         case {'static', 'blank'}
             Signal(i,:) = (Y(:)' * P.G.G) / n_pixels;
-        case {'static-delayed','dynamic-delayed','dynamic-switching-signal','dynamic-switching-signal-blocked'}
+        case {'static-delayed','dynamic-delayed','dynamic-switching-signal','dynamic-switching-signal-blocked', 'dynamic-shuffled-signal', 'dynamic-shuffled-signal-blocked'}
             % do convolution at each frame (tmp variable to assist in
             % parfor slicing)
             tmp = zeros(n_neurons, n_frames);
@@ -78,7 +79,7 @@ out = BackwardsComp(out);
 
 end
 
-function stim = create_trial_stimulus(regime, im_type, contrast, im_height, n_locs, n_frames, n_zero_sig)
+function stim = create_trial_stimulus(regime, im_type, contrast, im_height, n_locs, n_frames, n_zero_sig, match_prob)
 % helper function to create the stimulus for each trial
 
 if strcmp(regime, 'blank')
@@ -105,9 +106,17 @@ switch regime
     case {'dynamic-switching-signal','dynamic-switching-signal-blocked'}
         signal = zeros(n_frames,1,2);
         for frame = n_zero_sig+1:n_frames
-            on = 1+binornd(1,0.5);
+            on = 1+binornd(1,match_prob);
             signal(frame,1,on) = contrast(on);
         end
+    case {'dynamic-shuffled-signal', 'dynamic-shuffled-signal-blocked'}
+        % like dynamic-switching-signal, but exactly 'match_prob' percent
+        % of the frames will be 'on', but the order randomized.
+        signal = zeros(n_frames,1,2);
+        frameorder = randperm(n_frames);
+        n_on = round(n_frames * match_prob);
+        signal(frameorder(1:n_on),1,1) = contrast(1);
+        signal(frameorder(n_on+1:end),1,2) = contrast(2);
 end
 stim = InputImage(im_type, n_locs, im_height, signal);
 end

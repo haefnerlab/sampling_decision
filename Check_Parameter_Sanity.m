@@ -1,7 +1,7 @@
 function Check_Parameter_Sanity(P)
 %CHECK_PARAMETER_SANITY warn or error certain cases of parameter values
 
-if ~any(strcmp(P.I.stimulus_regime, {'blank', 'static', 'static-delayed', 'dynamic-delayed', 'dynamic-switching-signal','dynamic-switching-signal-blocked'}))
+if ~any(strcmp(P.I.stimulus_regime, {'blank', 'static', 'static-delayed', 'dynamic-delayed', 'dynamic-switching-signal','dynamic-switching-signal-blocked', 'dynamic-shuffled-signal', 'dynamic-shuffled-signal-blocked'}))
     error('Unknown stimulus regime: %s', P.I.stimulus_regime);
 end
 
@@ -10,7 +10,7 @@ if ~any(strcmp(P.I.stimulus_regime, {'blank', 'static'})) ...
     error('n_zero_signal (%d) >= n_frames (%d). Nothing left to be signal!', P.I.n_zero_signal, P.I.n_frames);
 end
 
-if any(strcmp(P.I.stimulus_regime, {'dynamic-delayed', 'dynamic-switching-signal','dynamic-switching-signal-blocked'})) ...
+if any(strcmp(P.I.stimulus_regime, {'dynamic-delayed', 'dynamic-switching-signal','dynamic-switching-signal-blocked','dynamic-shuffled-signal','dynamic-shuffled-signal-blocked'})) ...
         && P.G.number_locations > 1,
     error('dynamic signal at multiple locations not implemented!');
 end
