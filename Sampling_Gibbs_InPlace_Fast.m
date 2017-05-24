@@ -213,8 +213,6 @@ order = randperm(nX);
 % X_k to be sampled
 for i = order
     % x is drawn from a 'cut gaussian' with mean mu and variance sig^2
-    % TODO - where did R_ii go (eqns 18-20 in 'ff vs fb' document)? Did we
-    % ensure that each projective field has an L2 norm of 1?
     idx_no_i = [1:i-1 i+1:nX]; % all but i index
     sig = sigy / s;
     kO  = mod(i-1, dimX)+1;  % index of X_i's Gabor orientation
