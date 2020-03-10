@@ -13,7 +13,7 @@ para.G.delta = .08;
 para.I.stimulus_contrast = [+4 +4];
 para.I.signal_match_probability = .9;
 lshc_results = runWithParams(para, savedir);
-CB_Diagnostics(lshc_results);
+CB_Diagnostics(lshc_results, 'LSHC Condition');
 
 %% RUN HSLC
 para.S.number_repetitions = 1000;
@@ -21,7 +21,7 @@ para.G.delta = .01;
 para.I.stimulus_contrast = [+18 +18];
 para.I.signal_match_probability = .6;
 hslc_results = runWithParams(para, savedir);
-CB_Diagnostics(hslc_results);
+CB_Diagnostics(hslc_results, 'HSLC Condition');
 end
 
 function results = runWithParams(para, savedir)

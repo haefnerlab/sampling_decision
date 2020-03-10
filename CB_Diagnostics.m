@@ -1,4 +1,4 @@
-function CB_Diagnostics(results)
+function CB_Diagnostics(results, name)
 
 results_pos = results{1};
 results_neg = results{2};
@@ -13,7 +13,7 @@ n_pos = length(choice_pos);
 n_neg = length(choice_neg);
 percent_correct = (mean(choice_pos == true)*n_pos + mean(choice_neg == false)*n_neg) / (n_pos + n_neg);
 
-fprintf('=== CB Diagnostics ===\n');
+fprintf('=== CB Diagnostics: %s ===\n', name);
 fprintf('\t%d trials\n', n_pos);
 fprintf('\tcontrast set to %.1f, %.1f\n', results_pos.InputImage.c(1), results_pos.InputImage.c(2));
 fprintf('\tdelta set to %.3f\n', results_pos.Projection.delta);
@@ -34,7 +34,9 @@ true_cat = sign([signal_pos; signal_neg]);
 
 w = glmfit([signal_pos; signal_neg], [choice_pos; choice_neg], 'binomial');
 subplot(1,2,1);
-plot(w(2:end));
+w_norm = w(2:end) / mean(w(2:end));
+plot(w_norm);
+ylim([0 max(w_norm)]);
 title('PK');
 
 %% Correlations analysis
