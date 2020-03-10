@@ -196,8 +196,6 @@ if DBG
     Subplot(2); Histogram(MUK);
 end
 
-disp(size(O)) % 1xn_samples
-
 O   (2:1+Ge.number_orientations,:) = pO_Posterior;
 Task(2:1+Ge.nT,:) = pT_Posterior;
 L   (2:1+nL,:) = pL_Posterior;
