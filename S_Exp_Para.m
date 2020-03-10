@@ -69,14 +69,15 @@ switch mode
         P.G.dimension_G = 30;
         P.G.prior_task = [1 0];
         P.S.number_repetitions = 500;
-        P.I.stimulus_regime = 'dynamic-shuffled-signal-blocked';
+        P.I.stimulus_regime = 'dynamic-switching-signal-blocked';
         P.I.signal_match_probability = 0.8;
-        P.I.stimulus_contrast = ones(1,P.G.number_orientations);
-        P.G.number_samples_per_evidence = 5;
+        P.I.stimulus_contrast = 5*ones(1, 2);
+        % 100 samples - 20 zero signal = 80 stimulus samples, divided into 8 pieces = 10 frames.
+        P.G.number_samples_per_evidence = 8;
         % Note: performance tradeoff controlled in the stimulus using
         % tradeoff of sensory info (P.I.stimulus_contrast) versus category
         % info (P.I.signal_match_probability). In the generative model, the
-        % corresponding fields are 
+        % corresponding fields are [n/a] and delta.
 
     case 'paper-2AFC-corr'
         P.G.dimension_X = 1024;
