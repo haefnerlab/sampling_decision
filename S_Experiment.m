@@ -20,9 +20,10 @@ n_zero_sig = P.I.n_zero_signal;
 n_neurons = P.G.dimension_X * P.G.number_locations;
 n_pixels = size(P.G.G,1);
 match_prob = P.I.signal_match_probability;
+seeds = P.I.frame_seq_seeds;
 
 % function handle to make a new stimulus
-create_stimulus_handle = @() create_trial_stimulus(regime, im_type, contrast, im_height, n_locs, n_frames, n_zero_sig, match_prob);
+create_stimulus_handle = @() create_trial_stimulus(regime, im_type, contrast, im_height, n_locs, n_frames, n_zero_sig, match_prob, seeds);
 
 % pre-allocate the return variables
 Signal = zeros(n_trials, n_neurons, n_frames);
@@ -86,13 +87,20 @@ out = BackwardsComp(out);
 
 end
 
-function [stim, signal] = create_trial_stimulus(regime, im_type, contrast, im_height, n_locs, n_frames, n_zero_sig, match_prob)
+function [stim, signal] = create_trial_stimulus(regime, im_type, contrast, im_height, n_locs, n_frames, n_zero_sig, match_prob, seeds)
 % helper function to create the stimulus for each trial
 
 if strcmp(regime, 'blank')
     stim = zeros(im_height, n_locs*im_height);
     return
 end
+
+if ~isempty(seeds)
+    sd = seeds(randi(length(seeds)));
+    hold_rng_state = rng();
+    rng(sd, 'twister');
+end
+
 % As long as regime is not 'blank', the image itself changes, drawn
 % from some distribution based on the 'signal', i.e. contrast at
 % each location, which varies sample to sample in the
@@ -126,6 +134,13 @@ switch regime
         signal(n_zero_sig+frameorder(1:n_on),1,1) = contrast(2);
         signal(n_zero_sig+frameorder(n_on+1:end),1,2) = contrast(1);
 end
+
+% Restore RNG state *after* generating frame categories but *before* generating noisy images in
+% InputImage()
+if ~isempty(seeds)
+    rng(hold_rng_state);
+end
+
 stim = InputImage(im_type, n_locs, im_height, signal);
 end
 

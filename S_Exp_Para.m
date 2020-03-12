@@ -61,6 +61,10 @@ P.I.stimulus_regime = 'static';
 P.I.n_zero_signal = 20; % number of frames before onset of stimulus
 P.I.stimulus_contrast = zeros(1,P.G.number_orientations);
 P.I.signal_match_probability = 0.5; % p(on) each frame for dynamic-* signal regimes
+% If 'frame_seq_seeds' is non-empty and stimulus_regime is a 'shuffled' or 'switching' type, uses
+% one of the seeds here for generating frame categories. Importantly, this has no effect on the
+% white noise added to each frame, just the ordering of contrast values.
+P.I.frame_seq_seeds = [];
 
 %% Specialize default values based on mode
 switch mode
