@@ -1,5 +1,4 @@
-function [optim_correct, optim_kappas, percent_correct, contrasts, match_probs, kappas] = ...
-    plotSensoryCategorySpace(nGrid, params, postfix)
+function [percent_correct, contrasts, match_probs] = plotSensoryCategorySpace(nGrid, params, postfix)
 
 if ~exist('memo', 'dir'), mkdir('memo'); end
 if nargin < 2
@@ -9,49 +8,33 @@ elseif nargin == 2
     error('if supplying params, also give a 3rd argument identifying it for memoization');
 end
 
-nProbs = min(nGrid, params.I.n_frames);
-contrasts = linspace(0, 20, nGrid);
-match_probs = linspace(0.5, 1, nProbs);
-kappas = linspace(0, 3, nGrid);
-[cc, pp, kk] = meshgrid(contrasts, match_probs, kappas);
+% Large number of parameters to consider.. run only 100 trials each
+params.S.number_repetitions = 100;
+
+contrasts = linspace(0, 10, nGrid);
+match_probs = linspace(0.5, 1, nGrid);
+[cc, pp] = meshgrid(contrasts, match_probs);
 
 %% Load or Run sampling model on each combination of contrast/prob/kappa
 
 percent_correct = zeros(size(cc));
 
 parfor i=1:numel(cc)
-    fileName = ['CB-c' num2str(cc(i)) '-p' num2str(pp(i)) '-k' num2str(kk(i)) '-' postfix '.mat'];
-    result = LoadOrRun(@S_Experiment, {params}, fullfile('memo', fileName));
-    nTrials = size(result.O, 1);
-    choices = arrayfun(@(t) mode(result.O(t, 1, :)), 1:nTrials);
-    percent_correct(i) = sum(choices == 1) / nTrials;
-end
-
-% Maximize percent-correct across values of kappa.
-% TODO - interpn before smoothing?
-if exist('smoothn', 'file')
-    percent_correct_smooth = smoothn(percent_correct);
-else
-    percent_correct_smooth = percent_correct;
-    warning('Cannot find smoothn - %Correct results will be noisier');
-end
-
-optim_correct = zeros(nGrid, nProbs);
-optim_kappas = zeros(nGrid, nProbs);
-
-for i=1:nGrid
-    for j=1:nProbs
-        [max_pc, max_idx] = max(percent_correct_smooth(i, j, :));
-        optim_correct(i, j) = max_pc;
-        optim_kappas(i, j) = kappas(max_idx);
-    end
+    kappa = ci_to_kappa(cc(i));
+    fileName = ['CB-c' num2str(cc(i)) '-p' num2str(pp(i)) '-k' num2str(kappa) '-' postfix '.mat'];
+    params_copy = params;
+    params_copy.G.kappa_O = [kappa 0];
+    params_copy.I.stimulus_contrast = cc(i)*[+1 +1];
+    params_copy.I.signal_match_probability = pp(i);
+    result = LoadOrRun(@S_Experiment, {params_copy}, fullfile('memo', fileName));
+    choices = result.O(:,3,end) > .5;
+    percent_correct(i) = mean(choices == 1);
 end
 
 %% Plot results
 
 figure;
-subplot(1,2,1);
-imagesc(optim_correct, [0.5 1]);
+imagesc('XData', contrasts, 'YData', match_probs, 'CData', percent_correct, [0.5 1]);
 axis image;
 colorbar;
 set(gca, 'YDir', 'Normal');
@@ -59,13 +42,21 @@ xlabel('contrast');
 ylabel('p_{match}');
 title('Percent Correct');
 
-subplot(1,2,2);
-imagesc(optim_kappas, [min(kappas) max(kappas)]);
-axis image;
-colorbar;
-set(gca, 'YDir', 'Normal');
-xlabel('contrast');
-ylabel('p_{match}');
-title('Optimized \kappa');
+end
 
+function kappa = ci_to_kappa(ci)
+os = linspace(0,pi,1001);
+os = os(1:end-1);
+ks = linspace(0, 6);
+for ik=length(ks):-1:1
+    p1 = exp(ks(ik)*cos(os*2)); p1 = p1 ./ sum(p1);
+    p2 = exp(-ks(ik)*cos(os*2)); p2 = p2 ./ sum(p2);
+    ratio = p1 ./ (p1 + p2);
+    emp_ci(ik) = dot(p1, ratio);
+end
+
+ks = [0 ks 7];
+emp_ci = [.5 emp_ci 1];
+
+kappa = interp1(emp_ci, ks, ci);
 end
