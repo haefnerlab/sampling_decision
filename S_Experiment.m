@@ -26,6 +26,7 @@ create_stimulus_handle = @() create_trial_stimulus(regime, im_type, contrast, im
 
 % pre-allocate the return variables
 Signal = zeros(n_trials, n_neurons, n_frames);
+frame_category = zeros(n_trials, n_frames);
 
 %% loop over trials, parallelized over multiple cores if possible
 % (if not, parfor defaults to a backwards for loop)
@@ -35,7 +36,12 @@ parfor i = 1:n_trials
         disp(['Computing Repetition ' num2str(i) ' / ' num2str(n_trials)]);
     end
     
-    Y = create_stimulus_handle();
+    % Y is the actual image sequence for this trial, and true_signal is an array of
+    % [frames x locations x categories] contrast levels.
+    [Y, true_signal] = create_stimulus_handle();
+    % frame_category is one of [+1, 0, -1] indicating which stim category had more contrast on each
+    % frame
+    frame_category(i, :) = -sign(diff(true_signal, 1, 3));
     
     % Perform a trial
     % (suppressing warning that P is broadcast.. it's unavoidable)
@@ -74,12 +80,13 @@ end
 out.Projection = P;
 out.InputImage = P.I;
 out.Sampling = P.S;
+out.FrameCategory = frame_category;
 
 out = BackwardsComp(out);
 
 end
 
-function stim = create_trial_stimulus(regime, im_type, contrast, im_height, n_locs, n_frames, n_zero_sig, match_prob)
+function [stim, signal] = create_trial_stimulus(regime, im_type, contrast, im_height, n_locs, n_frames, n_zero_sig, match_prob)
 % helper function to create the stimulus for each trial
 
 if strcmp(regime, 'blank')
@@ -113,10 +120,11 @@ switch regime
         % like dynamic-switching-signal, but exactly 'match_prob' percent
         % of the frames will be 'on', but the order randomized.
         signal = zeros(n_frames,1,2);
-        frameorder = randperm(n_frames);
-        n_on = round(n_frames * match_prob);
-        signal(frameorder(1:n_on),1,1) = contrast(1);
-        signal(frameorder(n_on+1:end),1,2) = contrast(2);
+        frameorder = randperm(n_frames-n_zero_sig);
+        fractional_n_on = (n_frames-n_zero_sig) * match_prob;
+        n_on = floor(fractional_n_on) + (rand < rem(fractional_n_on, 1));
+        signal(n_zero_sig+frameorder(1:n_on),1,1) = contrast(2);
+        signal(n_zero_sig+frameorder(n_on+1:end),1,2) = contrast(1);
 end
 stim = InputImage(im_type, n_locs, im_height, signal);
 end
