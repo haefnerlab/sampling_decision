@@ -52,7 +52,7 @@ fprintf('\t%d unique combinations of categories\n', size(uSigs, 1));
 nRepeats = arrayfun(@(i) sum(idxExpand == i), 1:size(uSigs, 1));
 fprintf('\t%d sequences with > %d repeats\n', sum(nRepeats > minTrialsPer), minTrialsPer);
 zscoreX = nan(size(allX));
-for iSig=length(uSigs):-1:1
+for iSig=size(uSigs, 1):-1:1
     trialsAt = idxExpand == iSig;
     % Don't bother with cases where there were fewer than 5 trials with the same frame pattern
     if nRepeats(iSig) > minTrialsPer
