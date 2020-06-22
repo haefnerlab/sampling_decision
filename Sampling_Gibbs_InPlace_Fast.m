@@ -317,6 +317,11 @@ if max(pO) < 1 % there is some uncertainty left about O
             +squeeze(sum(log(1-kernel_O(attn, T, :, G(l,:)==0)),4)) ...
             +squeeze(sum(log(  kernel_O(attn, T, :, G(l,:)==1)),4));
         
+        % Apply leak to the log odds ratio
+        log_odds_O = log(pO) - log(1-pO);
+        log_odds_O = log_odds_O * (1-Ge.leak);
+        pO = 1./(1+exp(-log_odds_O));
+
         % take a step moving log_pO towards log_like_O
         log_pO = Ge.odds_inc * log_like_O' + log(pO);
         % return from log-probability to probability space in a relatively

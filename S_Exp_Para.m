@@ -38,6 +38,7 @@ P.G.pL = ones(1,P.G.number_locations)/P.G.number_locations; % locations prior (u
 P.G.phi_O = [(0:2:2*(P.G.number_orientations-1));...
              (1:2:2*P.G.number_orientations-1)] * pi/2/P.G.number_orientations;
 P.G.odds_inc = 1/20; % with 80 samples/sec, every 250ms independent signal
+P.G.leak = 0; % leak rate of log odds per update
 P.G.delta = .08; % strength of X-G coupling for corr & CPs
 P.G.nT = 2; % number of possible tasks
 P.G.number_samples_per_evidence = 2; % for dynamic-switching-signal-blocked or dynamic-shuffled-signal-blocked
@@ -72,6 +73,7 @@ switch mode
         P.G.dimension_X = 100;
         P.G.dimension_G = 30;
         P.G.prior_task = [1 0];
+        P.G.leak = .01;
         P.S.number_repetitions = 500;
         P.I.stimulus_regime = 'dynamic-switching-signal-blocked';
         P.I.signal_match_probability = 0.8;
