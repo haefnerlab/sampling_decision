@@ -34,36 +34,45 @@ true_cat = [results_pos.FrameCategory(:, zs+1:end); results_neg.FrameCategory(:,
 
 %% PK analysis
 
-w = glmfit([signal_pos; signal_neg], [choice_pos; choice_neg], 'binomial');
-subplot(1,2,1);
-w_norm = w(2:end) / mean(w(2:end));
-plot(w_norm);
-ylim([0 max(w_norm)]);
+
+[weights, ~, errs] = CustomRegression.PsychophysicalKernel([signal_pos; signal_neg], [choice_pos; choice_neg], 1, 0, 1000, 1);
+subplot(1,3,1);
+errorbar(weights(1:end-1), errs(1:end-1));
+ylim([0 max(weights(1:end-1)+2*errs(1:end-1))]);
 title('PK');
 
 %% Correlations analysis
-minTrialsPer = 10;
+minTrialsPer = 100;
 allX = cat(1, results_pos.X, results_neg.X);
 allX = sum(allX(:, :, zs+2:end), 3);
-% TODO: Select top 2ish repeates
 % Consider trials 'frozen' post-hoc when they had the same sequence of frame categories.
 [uSigs, ~, idxExpand] = unique(true_cat, 'rows');
 fprintf('\t%d unique combinations of categories\n', size(uSigs, 1));
 nRepeats = arrayfun(@(i) sum(idxExpand == i), 1:size(uSigs, 1));
-fprintf('\t%d sequences with > %d repeats\n', sum(nRepeats > minTrialsPer), minTrialsPer);
-zscoreX = nan(size(allX));
+fprintf('\t%d sequences with >= %d repeats\n', sum(nRepeats >= minTrialsPer), minTrialsPer);
+% Compute a correlation matrix per unique stimulus
+corrX = nan(size(allX, 2), size(allX, 2), size(uSigs, 1));
 for iSig=size(uSigs, 1):-1:1
     trialsAt = idxExpand == iSig;
-    % Don't bother with cases where there were fewer than 5 trials with the same frame pattern
-    if nRepeats(iSig) > minTrialsPer
-        zscoreX(trialsAt, :) = zscore(allX(trialsAt, :));
+    % Don't bother with cases where there were fewer than 'minTrialsPer' trials with the same frame pattern
+    if nRepeats(iSig) >= minTrialsPer
+        corrX(:, :, iSig) = nancov(zscore(allX(trialsAt, :)));
+    else
+        nRepeats(iSig) = nan;
     end
 end
-corrX = nancov(zscoreX);
-subplot(1,2,2);
-imagesc(corrX - eye(size(corrX)));
+% Combine across signal levels
+corrX = nansum(corrX .* reshape(nRepeats, 1, 1, size(uSigs, 1)), 3) ./ nansum(nRepeats);
+% Plot corr matrix
+subplot(1,3,2);
+imagesc(corrX - eye(size(corrX)), [-.1 .16]);
 axis image;
 colorbar;
 title('Correlations');
 
+% Plot principle components (since corr rather than cov, there are no lambdas)
+subplot(1,3,3);
+[E, ~] = svd(corrX);
+plot(E(:,1:5));
+title('Top PCs');
 end

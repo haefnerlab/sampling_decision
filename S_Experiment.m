@@ -96,8 +96,9 @@ if strcmp(regime, 'blank')
 end
 
 if ~isempty(seeds)
-    sd = seeds(randi(length(seeds)));
     hold_rng_state = rng();
+    rng('shuffle'); % shuffle to *pick* which seed, then simulation based on repeats of that seed
+    sd = seeds(randi(length(seeds)));
     rng(sd, 'twister');
 end
 
