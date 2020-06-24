@@ -17,7 +17,7 @@ end
 
 percent_correct = zeros(size(cc));
 
-for i=1:numel(cc)
+parfor i=1:numel(cc)
     % Dividing by ci_to_kappa(.9) ensures a match to other simulations, i.e. that at CI=0.9, kappa
     % is 1
     kappa = ci_to_kappa(pp(i)) / ci_to_kappa(.9);

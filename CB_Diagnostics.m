@@ -18,6 +18,7 @@ fprintf('\t%d trials\n', n_pos);
 fprintf('\tcontrast set to %.1f, %.1f\n', results_pos.InputImage.c(1), results_pos.InputImage.c(2));
 fprintf('\tkappa set to %.3f\n', results_pos.Projection.kappa_O(1));
 fprintf('\tdelta set to %.3f\n', results_pos.Projection.delta);
+fprintf('\tmatch prob. set to %.3f\n', results_pos.InputImage.signal_match_probability);
 fprintf('\t%.1f%% correct overall\n', 100*percent_correct);
 
 figure;
@@ -33,12 +34,11 @@ signal_neg = squeeze(sum(results_neg.Signal(:,:,sig_frames) .* reshape(pool_proj
 true_cat = [results_pos.FrameCategory(:, zs+1:end); results_neg.FrameCategory(:, zs+1:end)];
 
 %% PK analysis
-
-
-[weights, ~, errs] = CustomRegression.PsychophysicalKernel([signal_pos; signal_neg], [choice_pos; choice_neg], 1, 0, 1000, 1);
+[weights, ~, errs] = CustomRegression.PsychophysicalKernel([signal_pos; signal_neg], [choice_pos; choice_neg], 1, 0, 10000, 1);
+norm = mean(weights(1:end-1));
 subplot(1,3,1);
-errorbar(weights(1:end-1), errs(1:end-1));
-ylim([0 max(weights(1:end-1)+2*errs(1:end-1))]);
+errorbar(weights(1:end-1)/norm, errs(1:end-1)/norm);
+ylim([0 2]);
 title('PK');
 
 %% Correlations analysis
