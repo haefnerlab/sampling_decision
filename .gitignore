@@ -1,4 +1,4 @@
 *.m~
 *.mat
 *.DS_Store
-
+figures/
