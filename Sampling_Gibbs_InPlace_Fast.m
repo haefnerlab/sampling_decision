@@ -118,16 +118,18 @@ pT_Posterior = zeros(Ge.nT, S.n_samples);
 % starting at the top with L, O, Task.. then G.. then X
 
 Style(1) = Ge.tauStyle; % start with prior mean
-% find() of cumsum()>rand is the discrete version of inverting the cdf to
-% draw a sample from the prior
-L(1)    = find(cumsum(pL) > rand(1), 1, 'first');
-O(1)    = find(mnrnd(1,pO) == 1, 1);
-Task(1) = find(mnrnd(1,prior_task) == 1, 1);
+
+% Samplel initial values of L, O, and T from their prior
+L(1)    = randidx(pL);
+O(1)    = randidx(pO);
+Task(1) = randidx(prior_task);
 pL_Posterior(:,1) = pL;
 pO_Posterior(:,1) = pO;
 pT_Posterior(:,1) = prior_task;
 
+% Sample initial G conditioned on T, O, L
 G(:,:,1) = init_G(kernel_O, Task(1), O(1), L(1), nG, nL, dimG);
+% Sample initial X conditioned on G
 X(:,1)   = init_X(kernel_G, G(:,:,1), Ge.delta, nX, dimX);
 
 %% Gibbs sampling
@@ -179,7 +181,7 @@ for samp = 2:S.n_samples
     
     % Update Task
     [Task(1,samp), pT_Posterior(:,samp)] = ...
-        sample_Task(kernel_O, Ge, G(:,:,samp), O(1,samp), L(1,samp), prior_task);
+        sample_Task(kernel_O, Ge, G(:,:,samp), O(1,samp), L(1,samp), prior_task, nL);
     if DBG, disp(['i prior_task: ' num2str([samp pT_Posterior(:,samp)])]); end
     
     % Update Style
@@ -196,7 +198,7 @@ if DBG
     Subplot(2); Histogram(MUK);
 end
 
-disp(size(O)) % 1xn_samples
+if DBG, disp(['size O: ' num2str(size(O))]); end
 
 O   (2:1+Ge.number_orientations,:) = pO_Posterior;
 Task(2:1+Ge.nT,:) = pT_Posterior;
@@ -310,17 +312,17 @@ function [newO, pO] = sample_O(kernel_O, Ge, G, L, T, pO, nL)
 
 % TODO - O, T, and L are interdependent - do we really want to stop updating when pO reaches 1? Will it ever reach 1?
 if max(pO) < 1 % there is some uncertainty left about O
-    log_like_O = zeros(size(pO))';
+    log_like_O = zeros(size(pO));
     for l = 1:nL
         if L == l, attn = 1; else attn = 2; end
         
         % log(P(O|G)) sum over G dimension of log kernels
         log_like_O = log_like_O ...
-            +squeeze(sum(log(1-kernel_O(attn, T, :, G(l,:)==0)),4)) ...
-            +squeeze(sum(log(  kernel_O(attn, T, :, G(l,:)==1)),4));
+            +reshape(sum(log(1-kernel_O(attn, T, :, G(l,:)==0)),4), size(pO)) ...
+            +reshape(sum(log(  kernel_O(attn, T, :, G(l,:)==1)),4), size(pO));
         
         % take a step moving log_pO towards log_like_O
-        log_pO = Ge.odds_inc * log_like_O' + log(pO);
+        log_pO = Ge.odds_inc * log_like_O + log(pO);
         % return from log-probability to probability space in a relatively
         % numerically stable way (avoiding exp(very_very_negative_number))
         pO = exp(log_pO-max(log_pO));
@@ -329,14 +331,14 @@ if max(pO) < 1 % there is some uncertainty left about O
 end
 if any(isnan(pO)), error(['NaN value in posterior over O.. ' num2str(pO)]); end
 % sample guessed orientation: a multinomial random draw
-newO = find(mnrnd(1,pO) == 1, 1);
+newO = randidx(pO);
 end
 
 function [newL, pL] = sample_L(kernel_O, Ge, G, T, O, pL, nL)
 %UPDATE_L compute new posterior over L and take a sample
 
 if max(pL) < 1 % there is some uncertainty left about L
-    log_like_L = zeros(size(pL))';
+    log_like_L = zeros(size(pL));
     % compute posterior at each location L
     for L = 1:nL
         % requires a nested loop because in order to check each candidate
@@ -345,43 +347,50 @@ if max(pL) < 1 % there is some uncertainty left about L
         for l = 1:nL
             if L == l, attn = 1; else attn = 2; end
             log_like_L(L) = log_like_L(L)...
-                +squeeze(sum(log(1-kernel_O(attn, T, O, G(l,:) == 0)),4))...
-                +squeeze(sum(log(  kernel_O(attn, T, O, G(l,:) == 1)),4));
+                +reshape(sum(log(1-kernel_O(attn, T, O, G(l,:) == 0)),4), size(pL))...
+                +reshape(sum(log(  kernel_O(attn, T, O, G(l,:) == 1)),4), size(pL));
         end
     end
     
     % take a step moving log_pL towards log_like_L
-    log_pL = Ge.odds_inc * log_like_L' + log(pL);
+    log_pL = Ge.odds_inc * log_like_L + log(pL);
     % return from log-probability to probability space in a relatively
     % numerically stable way (avoiding exp(very_very_negative_number))
     pL = exp(log_pL - max(log_pL));
     pL = pL / sum(pL);
 end
+if any(isnan(pL)), error(['NaN value in posterior over L.. ' num2str(pL)]); end
 % sample a guessed location according to weighted posterior
-newL = find(cumsum(pL) > rand(1), 1, 'first');
+newL = randidx(pL);
 end
 
-function [newT, pT] = sample_Task(kernel_O, Ge, G, O, L, pT)
+function [newT, pT] = sample_Task(kernel_O, Ge, G, O, L, pT, nL)
 %SAMPLE_TASK compute new posterior over Task and take a sample
 
 if max(pT) < 1 % there is some uncertainty left about Task
-    log_like_T = zeros(size(pT))';
+    log_like_T = zeros(size(pT));
     
     for l = 1:nL
+        % L is spatial location of attention, so attn state is 1 ('attended') when L==l, and 2
+        % ('unattended') otherwise
         if L == l, attn = 1; else attn = 2; end
+        % kernel_O has shape (2 (attention states), #tasks, #orientations-per-task, #G). Compute
+        % p(Task|G) by summing log-evidence from all G==0 and G==1 states. kernel_O is a lookup
+        % table of these Task|G conditional probabilities
         log_like_T = log_like_T...
-            +squeeze(sum(log(1-kernel_O(attn,:,O(samp),G(l,:,samp) == 0)),4))...
-            +squeeze(sum(log(  kernel_O(attn,:,O(samp),G(l,:,samp) == 1)),4));
+            +reshape(sum(log(  kernel_O(attn,:,O,G(l,:) == 1)),4), size(pT))...
+            +reshape(sum(log(1-kernel_O(attn,:,O,G(l,:) == 0)),4), size(pT));
     end
     
     % take a step moving log_pT towards log_like_T
-    log_prior_task = Ge.odds_inc * log_like_T' + log(pT);
+    log_prior_task = Ge.odds_inc * log_like_T + log(pT);
     % return from log-probability to probability space in a relatively
     % numerically stable way (avoiding exp(very_very_negative_number))
     pT = exp(log_prior_task-max(log_prior_task));
     pT = pT/sum(pT);
 end
-newT = find(mnrnd(1, pT) == 1, 1);
+if any(isnan(pT)), error(['NaN value in posterior over T.. ' num2str(pT)]); end
+newT = randidx(pT);
 end
 
 function newStyle = sample_Style(Ge, Style, X, img, sigy)
@@ -429,4 +438,9 @@ for i = nX:-1:1
     tau(i) = delta + G(iL,:) * kernel_G(:, iO);
 end
 newX = exprnd(tau);
+end
+
+function idx = randidx(probs)
+probs = probs(:) / sum(probs);
+idx = find(rand < cumsum(probs), 1);
 end
