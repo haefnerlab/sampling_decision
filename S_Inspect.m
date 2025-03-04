@@ -67,9 +67,11 @@ switch fct
         Subplot; title('mean X'); xlabel('\phi');
         plot(squeeze(mean(mean(E.X(1,:,start:n0S),1),3)),'-');
         plot(squeeze(mean(mean(E.X(1,:,n0S+1:ntime),1),3)),'r-');
+
         Subplot; title('mean G'); xlabel('\phi');
         plot(squeeze(mean(mean(E.G(:,iL,:,start:n0S  ),1),4)),'-');
         plot(squeeze(mean(mean(E.G(:,iL,:,n0S+1:ntime),1),4)),'r-');
+       
         Subplot; title('Task'); xlabel('time');
         plot(squeeze(mean(E.T(:,1,:))),'r*');
         plot(squeeze(mean(E.T(:,2:end,:))),'-');
