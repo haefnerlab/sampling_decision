@@ -60,7 +60,9 @@ P.I.fct = 'nx2';
 P.I.stimulus_regime = 'static';
 P.I.n_zero_signal = 20; % number of frames before onset of stimulus
 P.I.stimulus_contrast = zeros(1,P.G.number_orientations);
-
+%%%%% By Shizhao Liu 03/05/2025. Adding a parameter (image_task) that controls whether
+%%%%% the input images are cardinal (0/90 degrees, default) or oblique (45/135)
+P.I.image_task = 'cardinal';
 %% Specialize default values based on mode
 switch mode
     case 'paper-2AFC-corr'
@@ -107,7 +109,13 @@ switch mode
         P.G.delta = 80;
         
         P.S.number_repetitions=1;        
-    
+    case 'test-interleaved'
+        %%% mode added by Shizhao Liu (03/05/2025) for testing interleaved
+        %%% simulation
+        P.G.dimension_X = 64;
+        P.G.dimension_G = 16;
+        P.S.number_repetitions = 50; 
+   
     otherwise
         warning('invalid option');
 end

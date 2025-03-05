@@ -19,9 +19,13 @@ im_height = P.G.ny;
 n_zero_sig = P.I.n_zero_signal;
 n_neurons = P.G.dimension_X * P.G.number_locations;
 n_pixels = size(P.G.G,1);
-
+%%%%% By Shizhao Liu 03/05/2025. Adding a parameter (image_task) that controls whether
+%%%%% the input images are cardinal (0/90 degrees, default) or oblique (45/135)
+%%%%% This parameter is also passed to create_trial_stimulus and then
+%%%%% Input_image
+image_task = P.I.image_task;
 % function handle to make a new stimulus
-create_stimulus_handle = @() create_trial_stimulus(regime, im_type, contrast, im_height, n_locs, n_frames, n_zero_sig);
+create_stimulus_handle = @() create_trial_stimulus(regime, im_type, contrast, im_height, n_locs, n_frames, n_zero_sig, image_task);
 
 % pre-allocate the return variables
 Signal = zeros(n_trials, n_neurons, n_frames);
@@ -78,8 +82,11 @@ out = BackwardsComp(out);
 
 end
 
-function stim = create_trial_stimulus(regime, im_type, contrast, im_height, n_locs, n_frames, n_zero_sig)
+function stim = create_trial_stimulus(regime, im_type, contrast, im_height, n_locs, n_frames, n_zero_sig, image_task)
 % helper function to create the stimulus for each trial
+%%%%% By Shizhao Liu 03/05/2025. Adding a parameter (image_task) that controls whether
+%%%%% the input images are cardinal (0/90 degrees, default) or oblique (45/135)
+%%%%% This parameter is then passed to Input_image.
 
 if strcmp(regime, 'blank')
     stim = zeros(im_height, n_locs*im_height);
@@ -109,7 +116,8 @@ switch regime
             signal(frame,1,on) = contrast(on);
         end
 end
-stim = InputImage(im_type, n_locs, im_height, signal);
+%stim = InputImage(im_type, n_locs, im_height, signal);
+stim = InputImage(im_type, n_locs, im_height, signal, image_task);
 end
 
 function out = BackwardsComp(out)

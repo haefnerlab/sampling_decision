@@ -23,9 +23,19 @@ if P.G.kappa_O(2) >= P.G.kappa_O(1)
     warning('are you sure about P.kappa?'); 
 end
 
-if max(abs(P.I.stimulus_contrast)) > 0 && P.G.prior_task(1) < P.G.prior_task(2)
-    warning('non-zero stim contrasts imply Task = 1, not 2!!');
+%%%% modify this warning because we can simulate oblique task now
+%%%% By shizhao liu 03/05/2025
+% if max(abs(P.I.stimulus_contrast)) > 0 && P.G.prior_task(1) < P.G.prior_task(2)
+%     warning('non-zero stim contrasts imply Task = 1, not 2!!');
+% end
+if strcmp(P.I.image_task,'cardinal') &&  P.G.prior_task(1) < P.G.prior_task(2)
+    warning('Are you sure about doing a cardinal task with oblique prior?')
 end
+
+if strcmp(P.I.image_task,'oblique') &&  P.G.prior_task(1) > P.G.prior_task(2)
+    warning('Are you sure about doing a oblique task with cardinal prior?')
+end
+
 
 if sum(abs(diag(P.G.R)+1) > 1e-5)
     error('R_ii has to be -1!');
@@ -38,5 +48,11 @@ end
 if ~any(strcmp(P.G.task, {'discrimination', 'detection'}))
     error('unknown task: %s', P.G.task);
 end
+
+%%%% By shizhao liu 03/05/2025
+if strcmp(P.I.image_task,'oblique') & ~strcmp(P.I.fct ,'nx2')
+    error('Oblique task input image was only implemented for nx2 option')
+end
+
 
 end
