@@ -112,10 +112,11 @@ switch mode
     case 'test-interleaved'
         %%% mode added by Shizhao Liu (03/05/2025) for testing interleaved
         %%% simulation
-        P.G.dimension_X = 64;
-        P.G.dimension_G = 16;
-        P.S.number_repetitions = 50; 
-   
+        P.G.dimension_X                 = 64;
+        P.G.dimension_G                 = 16;
+        P.S.number_repetitions          = 50; 
+        P.G.fct                         = 'nxN-nonuniform'; % this option overrepresents cardinal orientations
+        P.G.downscale_oblique           = 2.3; % 2.3 make both task have comparable dprime 
     otherwise
         warning('invalid option');
 end
@@ -164,7 +165,9 @@ end
 %   1xN: 1 location, many orientations
 %   nx2: n locations, two orientations
 %   nxN: n locations, many orientations (Current)
-projective_fields = C_Projection(P.G.fct, P.G.nx, P.G.dimension_X, P.G.dimension_G, P.G.number_locations);
+%projective_fields = C_Projection(P.G.fct, P.G.nx, P.G.dimension_X, P.G.dimension_G, P.G.number_locations);
+projective_fields = C_Projection(P.G.fct, P.G.nx, P.G.dimension_X, P.G.dimension_G, P.G.number_locations, P.G.downscale_oblique);
+
 P.fct = 't-l-op-g-s';
 P.G.G     = projective_fields.G;
 P.G.R     = -P.G.G' * P.G.G; % useful to precompute this once
