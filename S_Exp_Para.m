@@ -116,7 +116,15 @@ switch mode
         P.G.dimension_G                 = 16;
         P.S.number_repetitions          = 50; 
         P.G.fct                         = 'nxN-nonuniform'; % this option overrepresents cardinal orientations
-        P.G.downscale_oblique           = 2.3; % 2.3 make both task have comparable dprime 
+        P.G.downscale_oblique           = 2.5; % 2.5 make both task have comparable dprime 
+    case 'run-interleaved'
+        %%% mode added by Shizhao Liu (03/08/2025) for running large-scale
+        %%% interleaves simulation
+        P.G.dimension_X                 = 256;
+        P.G.dimension_G                 = 64;
+        P.S.number_repetitions          = 512; 
+        P.G.fct                         = 'nxN-nonuniform'; % this option overrepresents cardinal orientations
+        P.G.downscale_oblique           = 2.5; % 2.5 make both task have comparable dprime 
     otherwise
         warning('invalid option');
 end
