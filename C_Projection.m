@@ -175,6 +175,7 @@ switch fct
                 zza = rot * [xx(:)'; yy(:)'];
                 xxs = zza(1,:);
                 yys = zza(2,:);
+
                 % get Gabor on rotated coordinates
                 gabor = Gabor_neu([0 1 2 0 0 0.1], xxs, 'orig') .* normpdf(yys,0,0.2);
                 P.G(:,(j-1)*P.nX+i) = gabor / norm(gabor);
@@ -203,20 +204,18 @@ switch fct
             P.nL = varargin{4};
         end
         if nargin_ < 6
-            P.downscale_oblique = 0;
+            P.b_PF = 0;
         else
-            P.downscale_oblique = varargin{5};
+            P.b_PF = varargin{5};
         end
         % set up projective field sizes
         P.ny = P.nx;
         P.nx = P.nL * P.ny;
-        P.x = linspace(-1/2, P.nL-1/2, P.nx); % TODO - make this and P.x definition in 'nx2' the same ?
+        P.x = linspace(-1/2, P.nL-1/2, P.nx); 
         P.y = linspace(-1/2, 1/2, P.ny);
 
-        % P.phi_x = (0:P.nX-1) / P.nX * pi;
-        % P.phi_g = (0:P.nG-1) / P.nG * pi;
-        P.phi_x = sample_phi(P.downscale_oblique, P.nX);
-        P.phi_g = sample_phi(P.downscale_oblique, P.nG);
+        P.phi_x = sample_phi(P.b_PF, P.nX);
+        P.phi_g = sample_phi(P.b_PF, P.nG);
         
         % create flattened matrix to store each image as a column vector
         P.G = zeros(P.nx*P.ny,P.nX*P.nL);
@@ -250,22 +249,19 @@ end
 
 end
 
-function phi = sample_phi(downscale, nNeuron)
-
-
-x = [0:0.01:180] * pi / 180;
-%y = cos(x*4) + a + 0.001;
-
-dist = min([abs(x-0);abs(x-pi/2); abs(x-pi)],[],1);
-y = exp(-dist * downscale);
-
+function phi = sample_phi(b_PF, nNeuron)
+%%%%% generate probability of each theta with Von Mise function, where b_PF
+%%%%% controls steepness of decay
+theta = [0:0.01:180] / 180 * pi;
+y =  (exp(b_PF * cos(2 * theta))+exp(b_PF * cos(2*(theta - pi/2))));
 probabilities = y / sum(y); % Normalize to sum to 1
-% Create cumulative distribution function (CDF)
-cumdf =  cumsum(probabilities); % Add 0 at the star
-% Generate uniform random samples
 
-linearValues = linspace(0,1,nNeuron);
-phi = interp1(cumdf,x, linearValues, 'linear','extrap');
+% Create cumulative distribution function (CDF)
+cumdf =  cumsum(probabilities); 
+cumdf(1) = 0; % Add 0 at the start
+% Generate uniform random samples
+linearProb = linspace(0,1,nNeuron);
+phi = interp1(cumdf,theta, linearProb, 'linear','extrap');
 
 
 end

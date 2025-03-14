@@ -88,20 +88,31 @@ switch fct
             case 'oblique'
                 % rotate the pixel coordinates we got from meshgrid
                 rotate_phi = pi/4;
+                
                 rot = [[cos(rotate_phi) sin(rotate_phi)]; [-sin(rotate_phi) cos(rotate_phi)]];
                 zza = rot * [xx(:)'; yy(:)'];
                 xxr = reshape(zza(1,:), ny,nx);
                 yyr = reshape(zza(2,:), ny,nx);
+                % xxr = reshape(zza(1,:), ny,nx)/(abs(cos(rotate_phi)) + abs(sin(rotate_phi)));
+                % yyr = reshape(zza(2,:), ny,nx)/(abs(cos(rotate_phi)) + abs(sin(rotate_phi)));
+
         end
         for i=1:nL
             %auxV=Gabor_neu([0 1 2 0  i-1 0.1],xx,'orig').*normpdf(yy,  0,0.2);
-            auxV=Gabor_neu([0 1 2 0  i-1 0.1],xxr,'orig'); % new July 2015
-            auxV=auxV/norm(auxV);
+            %auxV=Gabor_neu([0 1 2 0  i-1 0.1],xxr,'orig'); % new July 2015
+            auxV = Gabor_neu([0 1 2 0  i-1 0.1],xxr,'orig').*normpdf(yyr,  0, 0.2);
+            auxV = auxV/norm(auxV(:));
+           
             %auxH=Gabor_neu([0 1 2 0    0 0.1],yy,'orig').*normpdf(xx,i-1,0.2);
-            auxH=Gabor_neu([0 1 2 0    0 0.1],yyr,'orig'); % new July 2015
-            auxH=auxH/norm(auxH);
+           % auxH=Gabor_neu([0 1 2 0    0 0.1],yyr,'orig'); % new July 2015
+            auxH = Gabor_neu([0 1 2 0    0 0.1],yyr,'orig').*normpdf(xxr,i-1,0.2);
+            auxH = auxH/norm(auxH(:));
+            % for k=1:nr
+            %     Y(k,:,:)=squeeze(Y(k,:,:))+c(k,i,1)*auxV+c(k,i,2)*auxH;
+            % end
             for k=1:nr
-                Y(k,:,:)=squeeze(Y(k,:,:))+c(k,i,1)*auxV+c(k,i,2)*auxH;
+                im_signal = c(k,i,1) * auxV + c(k,i,2) * auxH;
+                Y(k,:,:)= squeeze(Y(k,:,:)) + im_signal;
             end
         end
         Y=squeeze(Y);
@@ -195,6 +206,63 @@ switch fct
         if DEBUG, debug_image; end
         Y=squeeze(Y);
         noiseless=aux;
+    case 'make_gabor_bcs'
+        %%% 
+        %%% Call this function by Adam - Shizhao 03/11/2025
+
+        nL = varargin{1};
+        ny = varargin{2}; nx=nL*ny;
+        c  = varargin{3}; % contrast of each patch [time,location,orientation]
+        image_task = varargin{4};
+        switch length(size(c))
+            case 2,    nr=1; c=reshape(c,[1 size(c)]);
+            case 3,    nr=size(c,1);
+            otherwise, error('wrong size contrast dimensions');
+        end
+        %Y=randn(nr,ny,nx); % white noise background
+        switch image_task
+            case 'cardinal'
+                orientation_list = [0,90];
+            case 'oblique'
+                orientation_list = [45, 135];
+        end
+        contrast_list = c(1,1,:); 
+
+        Y = zerors(nr,ny,nx);
+        for k=1:nr
+                Y(k,:,:) = make_gabor_acs('isize',ny,...
+                                'orient_deg',orientation_list(nr),...
+                                'contrast',contrast_list(nr),...
+                                'noise',noise_list(j));
+        end
+        % %Y=0*Y; warning('zero noise!!!');
+        % x=linspace(-1/2,nL-1/2,nx); y=linspace(-1/2,1/2,ny);
+        % [xx yy]=meshgrid(x,y);
+        % switch image_task 
+        %     case 'cardinal'
+        %         % no need to rotate, just use the orginal  coordinates
+        %         xxr = xx;
+        %         yyr = yy;
+        %     case 'oblique'
+        %         % rotate the pixel coordinates we got from meshgrid
+        %         rotate_phi = pi/4;
+        %         rot = [[cos(rotate_phi) sin(rotate_phi)]; [-sin(rotate_phi) cos(rotate_phi)]];
+        %         zza = rot * [xx(:)'; yy(:)'];
+        %         xxr = reshape(zza(1,:), ny,nx);
+        %         yyr = reshape(zza(2,:), ny,nx);
+        % end
+        % for i=1:nL
+        %     %auxV=Gabor_neu([0 1 2 0  i-1 0.1],xx,'orig').*normpdf(yy,  0,0.2);
+        %     auxV=Gabor_neu([0 1 2 0  i-1 0.1],xxr,'orig'); % new July 2015
+        %     auxV=auxV/norm(auxV);
+        %     %auxH=Gabor_neu([0 1 2 0    0 0.1],yy,'orig').*normpdf(xx,i-1,0.2);
+        %     auxH=Gabor_neu([0 1 2 0    0 0.1],yyr,'orig'); % new July 2015
+        %     auxH=auxH/norm(auxH);
+        %     for k=1:nr
+        %         Y(k,:,:)=squeeze(Y(k,:,:))+c(k,i,1)*auxV+c(k,i,2)*auxH;
+        %     end
+        % end
+
     otherwise
         error(fct);
 end

@@ -115,16 +115,31 @@ switch mode
         P.G.dimension_X                 = 64;
         P.G.dimension_G                 = 16;
         P.S.number_repetitions          = 50; 
-        P.G.fct                         = 'nxN-nonuniform'; % this option overrepresents cardinal orientations
-        P.G.downscale_oblique           = 2.5; % 2.5 make both task have comparable dprime 
+        P.G.fct                         = 'nxN'; % this option overrepresents cardinal orientations 
     case 'run-interleaved'
         %%% mode added by Shizhao Liu (03/08/2025) for running large-scale
         %%% interleaves simulation
         P.G.dimension_X                 = 256;
         P.G.dimension_G                 = 64;
         P.S.number_repetitions          = 512; 
-        P.G.fct                         = 'nxN-nonuniform'; % this option overrepresents cardinal orientations
-        P.G.downscale_oblique           = 2.5; % 2.5 make both task have comparable dprime 
+        P.G.fct                         = 'nxN'; % this option overrepresents cardinal orientations
+   case 'test-interleaved-nonuniform'
+        %%% mode added by Shizhao Liu (03/13/2025) for testing interleaved
+        %%% simulation with neuron population with nonuniform preferred
+        %%% orientations
+        P.G.dimension_X                 = 64;
+        P.G.dimension_G                 = 16;
+        P.S.number_repetitions          = 50; 
+        P.G.fct                         = 'nxN-nonuniform'; % this option overrepresents cardinal orientations 
+        P.G.b_PF                        = 0.8; % 0.8 makes the ratio between peak and trough to be 1.35 (ref: Fang et al., 2022, PNAS) 
+    case 'run-interleaved-nonuniform'
+        %%% mode added by Shizhao Liu (03/13/2025) for running large-scale
+        %%% interleaves simulation with nonuniform preferred orientations
+        P.G.dimension_X                 = 256;
+        P.G.dimension_G                 = 64;
+        P.S.number_repetitions          = 512; 
+        P.G.fct                         = 'nxN-nonuniform'; % this option overrepresents cardinal orientations 
+        P.G.b_PF                        = 0.8; % 0.8 makes the ratio between peak and trough to be 1.35 (ref: Fang et al., 2022, PNAS) 
     otherwise
         warning('invalid option');
 end
@@ -174,7 +189,7 @@ end
 %   nx2: n locations, two orientations
 %   nxN: n locations, many orientations (Current)
 %projective_fields = C_Projection(P.G.fct, P.G.nx, P.G.dimension_X, P.G.dimension_G, P.G.number_locations);
-projective_fields = C_Projection(P.G.fct, P.G.nx, P.G.dimension_X, P.G.dimension_G, P.G.number_locations, P.G.downscale_oblique);
+projective_fields = C_Projection(P.G.fct, P.G.nx, P.G.dimension_X, P.G.dimension_G, P.G.number_locations, P.G.b_PF);
 
 P.fct = 't-l-op-g-s';
 P.G.G     = projective_fields.G;
