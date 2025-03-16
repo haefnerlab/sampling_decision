@@ -253,7 +253,16 @@ function phi = sample_phi(b_PF, nNeuron)
 %%%%% generate probability of each theta with Von Mise function, where b_PF
 %%%%% controls steepness of decay
 theta = [0:0.01:180] / 180 * pi;
-y =  (exp(b_PF * cos(2 * theta))+exp(b_PF * cos(2*(theta - pi/2))));
+%%%% 
+if b_PF > 0
+    %%% overrepresent cardinal orientation
+    y =  (exp(b_PF * cos(2 * theta))+exp(b_PF * cos(2*(theta - pi/2))));
+else
+    %%%% overrepresent oblique orientation
+    y =  (exp(b_PF * cos(2 * (theta - pi/4)))+exp(b_PF * cos(2*(theta - 3 *pi/4))));
+end
+
+%y =  (exp(b_PF * cos(2 * theta))+exp(b_PF * cos(2*(theta - pi/2))));
 probabilities = y / sum(y); % Normalize to sum to 1
 
 % Create cumulative distribution function (CDF)
