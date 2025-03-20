@@ -189,7 +189,11 @@ end
 %   nx2: n locations, two orientations
 %   nxN: n locations, many orientations (Current)
 %projective_fields = C_Projection(P.G.fct, P.G.nx, P.G.dimension_X, P.G.dimension_G, P.G.number_locations);
-projective_fields = C_Projection(P.G.fct, P.G.nx, P.G.dimension_X, P.G.dimension_G, P.G.number_locations, P.G.b_PF);
+if strcmp(P.G.fct, 'nxN-nonuniform')
+    projective_fields = C_Projection(P.G.fct, P.G.nx, P.G.dimension_X, P.G.dimension_G, P.G.number_locations, P.G.b_PF);
+else
+    projective_fields = C_Projection(P.G.fct, P.G.nx, P.G.dimension_X, P.G.dimension_G, P.G.number_locations);
+end
 
 P.fct = 't-l-op-g-s';
 P.G.G     = projective_fields.G;
