@@ -135,9 +135,9 @@ switch mode
     case 'run-interleaved-nonuniform'
         %%% mode added by Shizhao Liu (03/13/2025) for running large-scale
         %%% interleaves simulation with nonuniform preferred orientations
-        P.G.dimension_X                 = 256;
-        P.G.dimension_G                 = 64;
-        P.S.number_repetitions          = 512; 
+        P.G.dimension_X                 = 128;
+        P.G.dimension_G                 = 32;
+        P.S.number_repetitions          = 256; 
         P.G.fct                         = 'nxN-nonuniform'; % this option overrepresents cardinal orientations 
         P.G.b_PF                        = 0.8; % 0.8 makes the ratio between peak and trough to be 1.35 (ref: Fang et al., 2022, PNAS) 
     otherwise
