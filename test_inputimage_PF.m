@@ -4,7 +4,7 @@ close all
 %%
 % Parameters
 isize = 32;         % Size of the patch (pixels)
-sigma = 0.1;         % Gaussian envelope standard deviation
+sigma = 0.2;         % Gaussian envelope standard deviation
 f = 2;               % Spatial frequency 
 
 phi = 0;            % Phase offset
@@ -34,7 +34,7 @@ for n = 1:numel(theta_list)
     % gabor_2 = A * exp(- (y_theta.^2 +  x_theta.^2) / (2 * sigma^2)) ...
     %             .* cos(2 * pi * f * y_theta + phi);
 
-    gabor_1=Gabor_neu([0 1 f 0  0 sigma], x_theta, 'orig').* normpdf(y_theta,0,sigma);
+    gabor_1=Gabor_neu([0 1 f 0  0 0.1], x_theta, 'orig').* normpdf(y_theta,0,sigma);
     %gabor_1((x_theta.^2+y_theta.^2) > (1/2).^2) = 0;
     norm(gabor_1)
     norm(gabor_1(:))
@@ -42,13 +42,13 @@ for n = 1:numel(theta_list)
     
     gabor_image{n} = gabor_1;
     subplot(1,4,n);imagesc(gabor_1); %clim([-A,A])
-    [orientation_bins{n}, orientation_energy{n}] = get_ori_energy(gabor_1);
+   % [orientation_bins{n}, orientation_energy{n}] = get_ori_energy_model(gabor_1);
     
 end
-figure
-for n  = 1:4
-    plot(orientation_bins{n}, orientation_energy{n}); hold on
-end
+% figure
+% for n  = 1:4
+%     plot(orientation_bins{n}, orientation_energy{n}); hold on
+% end
 
 %% simulate projective field
 P.nX = 64;
@@ -86,33 +86,4 @@ end
 
             
 %%
-function [orientation_bins, orientation_energy] = get_ori_energy(gabor)
-% Apply 2D FFT
-F = fftshift(fft2(gabor));          % Compute 2D FFT and center it
-magnitude = abs(F);                 % Get magnitude (energy)
 
-% Compute orientation of each frequency component
-[fx, fy] = meshgrid( ...
-    linspace(-0.5, 0.5, size(gabor,1)), ...
-    linspace(-0.5, 0.5, size(gabor,1)));
-%fx(end,:) = []; fy(end,:) = [];     % Match the size to FFT result
-
-orientation_map = atan2(fy, fx);    % Orientation in radians (-pi to pi)
-
-% Now you can bin orientation energy
-num_bins = 12;
-orientation_bins = linspace(-pi/2, pi/2, num_bins);
-orientation_energy = zeros(1, num_bins);
-
-for i = 1:num_bins-1
-    mask = (orientation_map >= orientation_bins(i)) & (orientation_map < orientation_bins(i+1));
-    orientation_energy(i) = sum(magnitude(mask).^2, 'all'); % energy per orientation bin
-end
-
-% Plot orientation energy
-
-% plot(rad2deg(orientation_bins(1:end-1)), orientation_energy(1:end-1));
-% xlabel('Orientation (degrees)');
-% ylabel('Energy');
-% title('Orientation Energy Spectrum (via FFT)');
-end

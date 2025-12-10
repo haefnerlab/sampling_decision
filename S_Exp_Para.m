@@ -59,10 +59,21 @@ P.S.n_samples = P.S.number_burn_in+P.S.number_samples_to_use;
 P.I.fct = 'nx2';
 P.I.stimulus_regime = 'static';
 P.I.n_zero_signal = 20; % number of frames before onset of stimulus
-P.I.stimulus_contrast = zeros(1,P.G.number_orientations);
-%%%%% By Shizhao Liu 03/05/2025. Adding a parameter (image_task) that controls whether
+
+%%%%% By Shizhao Liu 03/05/2025. Adding a parameter (I.image_task) that controls whether
 %%%%% the input images are cardinal (0/90 degrees, default) or oblique (45/135)
 P.I.image_task = 'cardinal';
+
+%%%% By Shizhao Liu 11/19/2025. Add a parameter (G.switching_mode) that
+%%%% controls whether there is only one T variable (either cardinal or
+%%%% oblique) or two T varaibles (one for cardinal, another for oblique)
+P.G.switching_mode = 'single'; %%% "single" for one T, "dual" for two Ts
+
+P.G.clamp_prior     = false;
+%%%% By Shizhao Liu 12/04/2025. Add an option to decide if computing
+%%%% orientation energy of the image. Default is False
+P.I.run_ori_energy  = false; 
+P.I.n_ori_bin       = nan;
 %% Specialize default values based on mode
 switch mode
     case 'paper-2AFC-corr'
@@ -140,10 +151,42 @@ switch mode
         P.S.number_repetitions          = 256; 
         P.G.fct                         = 'nxN-nonuniform'; % this option overrepresents cardinal orientations 
         P.G.b_PF                        = 0.8; % 0.8 makes the ratio between peak and trough to be 1.35 (ref: Fang et al., 2022, PNAS) 
+    case 'test-attention'
+        P.G.dimension_X                 = 64;
+        P.G.dimension_G                 = 16;
+        P.S.number_repetitions          = 50; 
+        P.G.fct                         = 'nxN'; 
+        P.G.number_locations = 2;
+        P.G.pL = [0.5,0.5];
+        P.G.prior_task = [1,0];
+    case 'test-dualTask'
+        %%%%%% mode added by Shizhao Liu (11/19). In this mode, there are
+        %%%%%% two variables about task, T_cardinal and T_oblique. So that
+        %%%%%% the model can simulteneously perform cardinal and oblique
+        %%%%%% task. This is to simulate a more complex, but presumbly more
+        %%%%%% realistic version of imperfect task switching
+        P.G.dimension_X                 = 64;
+        P.G.dimension_G                 = 16;
+        P.S.number_repetitions          = 50; 
+        P.G.fct                         = 'nxN'; 
+        P.G.switching_mode              = 'dual';
+        P.G.prior_task                  = [nan,nan]; 
+        P.G.prior_task_cardinal         = 1;
+        P.G.prior_task_oblique          = 0; 
+    case 'run-dualTask'
+        P.G.dimension_X                 = 128;
+        P.G.dimension_G                 = 32;
+        P.S.number_repetitions          = 256; 
+        P.G.fct                         = 'nxN'; 
+        P.G.switching_mode              = 'dual';
+        P.G.prior_task                  = [nan,nan]; 
+        P.G.prior_task_cardinal         = 1;
+        P.G.prior_task_oblique          = 0; 
     otherwise
         warning('invalid option');
 end
 
+P.I.stimulus_contrast = zeros(1,P.G.number_locations, P.G.number_orientations);
 %% add in any additional args that were specified in 'varargin'
 for i=1:2:length(varargin)-1
     param_name = varargin{i};

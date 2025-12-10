@@ -1,4 +1,4 @@
-function [X, G, O, L, Style, Task] = Sampling_Gibbs_InPlace_Fast(Ge, S, I, Image, DBG)
+function [X, G, O, L, Style, Task, Task_cardinal, Task_oblique] = Sampling_Gibbs_InPlace_Fast(Ge, S, I, Image, DBG)
 % SAMPLING_GIBBS_INPLACE_FAST performs gibbs sampling on the given
 % generative model with G and X 'layers' of variables
 %
@@ -16,6 +16,10 @@ function [X, G, O, L, Style, Task] = Sampling_Gibbs_InPlace_Fast(Ge, S, I, Image
 %   - Task: like ?O? and ?L? for the currently inferred task
 %   - Style: ??? (TODO)
 
+%%%%% By Shizhao Liu, 11/19/2025:
+%%%%% Changed the code to accommodate a mode of dual-task-switching, where
+%%%%% there are two T variables, T_cardinal and T_oblique. They are
+%%%%% independent and can be 0 or 1.
 
 if nargin < 5, DBG = 0; end
 
@@ -71,34 +75,74 @@ end
 % graphical-model-parents (whether it's in the attended location, which
 % task is being performed, and the current Orientation belief)
 
-% dimension 1 is [attended, unattended], the rest are self-explanatory
-kernel_O = zeros([2 Ge.nT, Ge.number_orientations dimG]);
-% normalization such that sum over g of p(g | O) is 1 (on average one g is
-% 'on' at a time)
-norm_kernel_O = 1 ./ besseli(0, Ge.kappa_O) / dimG;
-for T = 1:Ge.nT
-    for O = 1:Ge.number_orientations
-        if O == 1 && strcmp(Ge.task, 'detection')
-            delta_cos = 0; % stimulus absent
-        else
-            % same for 'discrimination' and 'detection' tasks here
-            delta_cos = cos(2 * (Ge.phi_O(T,O) - Ge.phi_g));
+%%%%% By Shizhao Liu 11/19/2025. Added a mode that uses two Ts, one for
+%%%%% cardinal, one for oblique. Need to design variable dependency for
+%%%%% this mode ("Dual"). "Single" represents Ralf's original mode, where there is only one T. 
+switch Ge.switching_mode
+    case 'single' 
+        % dimension 1 is [attended, unattended], the rest are self-explanatory
+        kernel_O = zeros([2 Ge.nT, Ge.number_orientations dimG]);
+        % normalization such that sum over g of p(g | O) is 1 (on average one g is
+        % 'on' at a time)
+        norm_kernel_O = 1 ./ besseli(0, Ge.kappa_O) / dimG;
+        for T = 1:Ge.nT
+            for O = 1:Ge.number_orientations
+                if O == 1 && strcmp(Ge.task, 'detection')
+                    delta_cos = 0; % stimulus absent
+                else
+                    % same for 'discrimination' and 'detection' tasks here
+                    delta_cos = cos(2 * (Ge.phi_O(T,O) - Ge.phi_g));
+                end
+                
+                % the difference between attended and unattended is in the width of
+                % the von Mises, controlled by kappa_O (see S_Exp_Para)
+                kernel_O(1,T,O,:) = norm_kernel_O(1) * exp(Ge.kappa_O(1)*delta_cos);
+                kernel_O(2,T,O,:) = norm_kernel_O(2) * exp(Ge.kappa_O(2)*delta_cos);
+            end
+        end
+        kernel_O(kernel_O > 1) = 1;
+    case 'dual'
+        %%%% Need to design a kernel_O for dual mode
+        % Define two separate kernels. One for dependency between O and G
+        % in cardinal task, one for dependency in oblique task
+
+        % dimension 1 is [attended, unattended]
+        % the rest are self-explanatory
+        kernel_O_cardinal = zeros([2, 1, Ge.number_orientations, dimG]);
+        kernel_O_oblique  = zeros([2, 1, Ge.number_orientations, dimG]);
+        kernel_O_uniform  = ones([2, 1, Ge.number_orientations, dimG]);
+         % normalization such that sum over g of p(g | O) is 1 (on average one g is
+        % 'on' at a time)
+        norm_kernel_O = 1 ./ besseli(0, Ge.kappa_O) / dimG;
+
+        %%%%% define cardinal kernel
+        for O = 1:Ge.number_orientations
+            delta_cos = cos(2 * (Ge.phi_O(1,O) - Ge.phi_g)); % the first row in phi_O corresponds to the cardinal task
+                
+            kernel_O_cardinal(1,1,O,:) = norm_kernel_O(1) * exp(Ge.kappa_O(1)*delta_cos);
+            kernel_O_cardinal(2,1,O,:) = norm_kernel_O(2) * exp(Ge.kappa_O(2)*delta_cos);
+        end
+
+        %%%% define oblique kernel
+        for O = 1:Ge.number_orientations
+            delta_cos = cos(2 * (Ge.phi_O(2,O) - Ge.phi_g)); % the second row in phi_O corresponds to the oblique task
+                
+            kernel_O_oblique(1,1,O,:) = norm_kernel_O(1) * exp(Ge.kappa_O(1)*delta_cos);
+            kernel_O_oblique(2,1,O,:) = norm_kernel_O(2) * exp(Ge.kappa_O(2)*delta_cos);
         end
         
-        % the difference between attended and unattended is in the width of
-        % the von Mises, controlled by kappa_O (see S_Exp_Para)
-        kernel_O(1,T,O,:) = norm_kernel_O(1) * exp(Ge.kappa_O(1)*delta_cos);
-        kernel_O(2,T,O,:) = norm_kernel_O(2) * exp(Ge.kappa_O(2)*delta_cos);
-    end
+        %%%% define a uniform kernel (no task is on)
+        kernel_O_uniform             = kernel_O_uniform ./ besseli(0, 0) / dimG / 2;
+
+
 end
-kernel_O(kernel_O > 1) = 1;
 
 %% initialization and allocation of variables
 
 % pO, pL, prior_task are our priors
 pO = Ge.pO;
 pL = Ge.pL;
-prior_task = Ge.prior_task;
+
 
 X     = zeros(nX, S.n_samples); % X is a flattened [nL, dimX] matrix
 G     = zeros(nL, dimG, S.n_samples);
@@ -109,10 +153,27 @@ Style = zeros(1, S.n_samples);
 % O(2:end,:) is pO_Posterior, likewise for task and L)
 L     = zeros(1, S.n_samples);
 O     = zeros(1, S.n_samples);
-Task  = zeros(1, S.n_samples);
 pL_Posterior = zeros(nL, S.n_samples);
 pO_Posterior = zeros(Ge.number_orientations, S.n_samples);
-pT_Posterior = zeros(Ge.nT, S.n_samples);
+
+switch Ge.switching_mode
+    case 'single' 
+        prior_task = Ge.prior_task;
+        Task  = zeros(1, S.n_samples);
+        pT_Posterior = zeros(Ge.nT, S.n_samples);
+    case 'dual'
+        prior_task_cardinal     = Ge.prior_task_cardinal;
+        prior_task_oblique      = Ge.prior_task_oblique;
+        Task_cardinal           = zeros(1, S.n_samples);
+        Task_oblique            = zeros(1, S.n_samples);
+        pT_cardinal_Posterior   = zeros(1, S.n_samples);
+        pT_oblique_Posterior    = zeros(1, S.n_samples); 
+    
+        %%%% create this variable just for the sake of returning
+        Task    = nan * ones(1, S.n_samples); 
+end
+
+
 
 %% Draw initial values from priors
 % starting at the top with L, O, Task.. then G.. then X
@@ -122,15 +183,36 @@ Style(1) = Ge.tauStyle; % start with prior mean
 % Samplel initial values of L, O, and T from their prior
 L(1)    = randidx(pL);
 O(1)    = randidx(pO);
-Task(1) = randidx(prior_task);
 pL_Posterior(:,1) = pL;
 pO_Posterior(:,1) = pO;
-pT_Posterior(:,1) = prior_task;
 
-% Sample initial G conditioned on T, O, L
-G(:,:,1) = init_G(kernel_O, Task(1), O(1), L(1), nG, nL, dimG);
+
+switch Ge.switching_mode
+    case 'single' 
+        Task(1)             = randidx(prior_task);
+        pT_Posterior(:,1)   = prior_task;
+        % Sample initial G conditioned on T, O, L
+        G(:,:,1) = init_G(kernel_O, Task(1), O(1), L(1), nG, nL, dimG);
+    case 'dual'
+        Task_cardinal(1)             = randidx([1-prior_task_cardinal, prior_task_cardinal]) - 1;
+        Task_oblique(1)              = randidx([1-prior_task_oblique, prior_task_oblique]) - 1;
+        pT_cardinal_Posterior(:,1)   = prior_task_cardinal;
+        pT_oblique_Posterior(:,1)    = prior_task_oblique;
+
+        % Sample initial G conditioned on T, O, L
+        %%%% First, get the kernel_O to use based on T variables
+        kernel_O_use = get_kernel_O_use_dual(kernel_O_cardinal, kernel_O_oblique, kernel_O_uniform, Task_cardinal(1),Task_oblique(1));
+        %%% The second input is task, which should always be 1 because kernel_O_use already accounts for task 
+        T_fix = 1;
+        
+        G(:,:,1) = init_G(kernel_O_use, T_fix, O(1), L(1), nG, nL, dimG);
+end
+
+
 % Sample initial X conditioned on G
 X(:,1)   = init_X(kernel_G, G(:,:,1), Ge.delta, nX, dimX);
+
+
 
 %% Gibbs sampling
 
@@ -140,53 +222,133 @@ for samp = 2:S.n_samples
     G(:,:,samp) = G(:,:,samp-1);
     O(:,samp) = O(:,samp-1);
     L(:,samp) = L(:,samp-1);
-    Task(:,samp) = Task(:,samp-1);
     Style(:,samp) = Style(:,samp-1);
     pO_Posterior(:,samp) = pO_Posterior(:,samp-1);
     pL_Posterior(:,samp) = pL_Posterior(:,samp-1);
-    pT_Posterior(:,samp) = pT_Posterior(:,samp-1);
+    switch Ge.switching_mode
+        case 'single'
+            Task(:,samp) = Task(:,samp-1);
+            pT_Posterior(:,samp) = pT_Posterior(:,samp-1);
+        case 'dual'
+            Task_cardinal(:,samp)           = Task_cardinal(:,samp-1);
+            Task_oblique(:,samp)            = Task_oblique(:, samp-1);
+            pT_cardinal_Posterior(:,samp)   = pT_cardinal_Posterior(:,samp-1);
+            pT_oblique_Posterior(:,samp)    = pT_oblique_Posterior(:,samp-1);
+    end
+    
+
+   
     
     % Get Image for this sample
     cur_Image = Image(:, S.access(samp));
     
     % Update priors (accumulated evidence after signal starts)
-    if samp > I.n_zero_signal
+    if samp > I.n_zero_signal 
         % previous posterior is current prior
         pO = pO_Posterior(:,samp)';
         pL = pL_Posterior(:,samp)';
-        prior_task = pT_Posterior(:,samp)';
+        if Ge.clamp_prior % do not update prior for task
+            switch Ge.switching_mode
+                case 'single'
+                    prior_task = Ge.prior_task;
+                case 'dual'
+                    prior_task_cardinal = Ge.prior_task_cardinal;
+                    prior_task_oblique  = Ge.prior_task_oblique;
+            end
+        else
+            switch Ge.switching_mode
+                case 'single'
+                    prior_task = pT_Posterior(:,samp)';
+                case 'dual'
+                    prior_task_cardinal = pT_cardinal_Posterior(:,samp)';
+                    prior_task_oblique  = pT_oblique_Posterior(:,samp)';
+            end
+        end
     else
         % if no signal, just use initial prior
         pO = Ge.pO;
         pL = Ge.pL;
-        prior_task = Ge.prior_task;
+
+        switch Ge.switching_mode
+            case 'single'
+            prior_task = Ge.prior_task;
+            case 'dual'
+            prior_task_cardinal = Ge.prior_task_cardinal;
+            prior_task_oblique  = Ge.prior_task_oblique;
+        end
+
     end
     
-    % Update X
-    X(:,samp) = sample_X(cur_Image, Ge, kernel_G, X(:,samp), G(:,:,samp), ...
-        Style(1,samp), sigy, S.alpha, nX, dimX);
-    
-    % Update G
-    G(:,:,samp) = sample_G(kernel_O, kernel_G, G(:,:,samp), X(:,samp), ...
-        Task(1,samp), O(1,samp), L(1,samp), S.alpha, nL, dimG, dimX);
-    
-    % Update O
-    [O(1,samp), pO_Posterior(:,samp)] = ...
-        sample_O(kernel_O, Ge, G(:,:,samp), L(1,samp), Task(1,samp), pO, nL);
-    if DBG, disp(['i pO: ' num2str([samp pO_Posterior(:,samp)])]); end
-    
-    % Update L
-    [L(1,samp), pL_Posterior(:,samp)] = ...
-        sample_L(kernel_O, Ge, G(:,:,samp), Task(1,samp), O(1,samp), pL, nL);
-    
-    % Update Task
-    [Task(1,samp), pT_Posterior(:,samp)] = ...
-        sample_Task(kernel_O, Ge, G(:,:,samp), O(1,samp), L(1,samp), prior_task, nL);
-    if DBG, disp(['i prior_task: ' num2str([samp pT_Posterior(:,samp)])]); end
-    
-    % Update Style
-    Style(:,samp) = sample_Style(Ge, Style(:,samp), X(:,samp), cur_Image, sigy);
-    
+    %%%%%%%%%% Update variables
+    switch Ge.switching_mode
+        case 'single'
+            % Update X
+            X(:,samp) = sample_X(cur_Image, Ge, kernel_G, X(:,samp), G(:,:,samp), ...
+                Style(1,samp), sigy, S.alpha, nX, dimX);
+            
+            % Update G
+            G(:,:,samp) = sample_G(kernel_O, kernel_G, G(:,:,samp), X(:,samp), ...
+                Task(1,samp), O(1,samp), L(1,samp), S.alpha, nL, dimG, dimX);
+            
+            % Update O
+            [O(1,samp), pO_Posterior(:,samp)] = ...
+                sample_O(kernel_O, Ge, G(:,:,samp), L(1,samp), Task(1,samp), pO, nL);
+            if DBG, disp(['i pO: ' num2str([samp pO_Posterior(:,samp)])]); end
+            
+            % Update L
+            [L(1,samp), pL_Posterior(:,samp)] = ...
+                sample_L(kernel_O, Ge, G(:,:,samp), Task(1,samp), O(1,samp), pL, nL);
+            
+            % Update Task
+            [Task(1,samp), pT_Posterior(:,samp)] = ...
+                sample_Task(kernel_O, Ge, G(:,:,samp), O(1,samp), L(1,samp), prior_task, nL);
+            if DBG, disp(['i prior_task: ' num2str([samp pT_Posterior(:,samp)])]); end
+            
+            % Update Style
+            Style(:,samp) = sample_Style(Ge, Style(:,samp), X(:,samp), cur_Image, sigy);
+        case 'dual'
+            %%%% Instead of creating new sampling functions, use the
+            %%%% existing ones, but change input to accommodate
+            %%%% dual-task-switching
+            %%%% first, get the kernel_O to use for this sample based on
+            %%%% Task_cardinal and T_oblique, which are not updated 
+            kernel_O_use = get_kernel_O_use_dual(kernel_O_cardinal, kernel_O_oblique, kernel_O_uniform, Task_cardinal(1,samp), Task_oblique(1, samp));
+            %%% The task input should always be 1 because kernel_O_use already accounts for task 
+            T_fix = 1;
+            
+
+            % Update X
+            X(:,samp) = sample_X(cur_Image, Ge, kernel_G, X(:,samp), G(:,:,samp), ...
+                Style(1,samp), sigy, S.alpha, nX, dimX);
+            
+            % Update G
+            G(:,:,samp) = sample_G(kernel_O_use, kernel_G, G(:,:,samp), X(:,samp), ...
+                T_fix, O(1,samp), L(1,samp), S.alpha, nL, dimG, dimX);
+            
+            % Update O
+            [O(1,samp), pO_Posterior(:,samp)] = ...
+                sample_O(kernel_O_use, Ge, G(:,:,samp), L(1,samp), T_fix, pO, nL);
+            if DBG, disp(['i pO: ' num2str([samp pO_Posterior(:,samp)])]); end
+            
+            % Update L
+            [L(1,samp), pL_Posterior(:,samp)] = ...
+                sample_L(kernel_O_use, Ge, G(:,:,samp), T_fix, O(1,samp), pL, nL);
+            
+            % Update Task_cardinal
+            [Task_cardinal(1,samp), pT_cardinal_Posterior(:,samp)] = ...
+                sample_task_dual(kernel_O_cardinal,kernel_O_oblique,kernel_O_uniform, Ge, G(:,:,samp), O(1,samp), L(1,samp), Task_oblique(1,samp), prior_task_cardinal, nL, 'cardinal');
+            
+            % Update Task_oblique
+            [Task_oblique(1,samp), pT_oblique_Posterior(:,samp)] = ...
+                sample_task_dual(kernel_O_cardinal,kernel_O_oblique,kernel_O_uniform, Ge, G(:,:,samp), O(1,samp), L(1,samp), Task_cardinal(1,samp), prior_task_oblique, nL, 'oblique');
+            
+            if DBG, disp(['i prior_task_cardinal: ' num2str([samp pT_cardinal_Posterior(:,samp)])]); end
+            if DBG, disp(['i prior_task_oblique: ' num2str([samp pT_oblique_Posterior(:,samp)])]); end
+            
+            % Update Style
+            Style(:,samp) = sample_Style(Ge, Style(:,samp), X(:,samp), cur_Image, sigy);
+    end
+            
 end
 
 if DBG
@@ -201,9 +363,14 @@ end
 if DBG, disp(['size O: ' num2str(size(O))]); end
 
 O   (2:1+Ge.number_orientations,:) = pO_Posterior;
-Task(2:1+Ge.nT,:) = pT_Posterior;
 L   (2:1+nL,:) = pL_Posterior;
-
+switch Ge.switching_mode
+    case 'single'
+        Task(2:1+Ge.nT,:) = pT_Posterior;
+    case 'dual'
+        Task_cardinal(2,:) = pT_cardinal_Posterior;
+        Task_oblique(2,:)  = pT_oblique_Posterior; 
+end
 end
 
 function newX = sample_X(img, Ge, kernel_G, X, G, s, sigy, alpha, nX, dimX)
@@ -443,4 +610,92 @@ end
 function idx = randidx(probs)
 probs = probs(:) / sum(probs);
 idx = find(rand < cumsum(probs), 1);
+end
+
+
+
+function [newT,pT] = sample_task_dual(kernel_O_cardinal, kernel_O_oblique, kernel_O_uniform, Ge, G, O, L, T_other, pT, nL, option)
+
+%%%% sample one task variable T, conditioned on the other task variable
+%%%% use option to specific which task T to sample
+
+if pT < 1 & pT > 0 % there is some uncertainty left about Task
+    log_like_T = zeros(1,2);
+    
+    for l = 1:nL
+        % L is spatial location of attention, so attn state is 1 ('attended') when L==l, and 2
+        % ('unattended') otherwise
+        if L == l, attn = 1; else attn = 2; end
+        % kernel_O has shape (2 (attention states), #tasks, #orientations-per-task, #G). Compute
+        % p(Task|G) by summing log-evidence from all G==0 and G==1 states. kernel_O is a lookup
+        % table of these Task|G conditional probabilities
+
+        switch option
+            case 'cardinal'
+                %%%%% Compute the kernel_O when T_cardinal  = 0 or 1 (on or off)
+                %%%% T_other is T_oblique.
+                
+                kernel_O_use_off = get_kernel_O_use_dual(kernel_O_cardinal, kernel_O_oblique, kernel_O_uniform, 0, T_other);
+                kernel_O_use_on  = get_kernel_O_use_dual(kernel_O_cardinal, kernel_O_oblique, kernel_O_uniform, 1, T_other);
+            case 'oblique'
+                %%%%% Compute the kernel_O when T_oblique  = 0 or 1 (on or off)
+                %%%% T_other is T_cardinal.
+                
+                kernel_O_use_off = get_kernel_O_use_dual(kernel_O_cardinal, kernel_O_oblique, kernel_O_uniform, T_other, 0);
+                kernel_O_use_on  = get_kernel_O_use_dual(kernel_O_cardinal, kernel_O_oblique, kernel_O_uniform, T_other, 1);
+
+        end
+        
+        %%%% likelihood of this task is off
+        log_like_T(1) = log_like_T(1)...
+            +reshape(sum(log(  kernel_O_use_off(attn,1,O,G(l,:) == 1)),4), 1,1)...
+            +reshape(sum(log(1-kernel_O_use_off(attn,1,O,G(l,:) == 0)),4), 1,1);
+
+        %%%% likelihood of this task is on
+        log_like_T(2) = log_like_T(2)...
+            +reshape(sum(log(  kernel_O_use_on(attn,1,O,G(l,:) == 1)),4), 1,1)...
+            +reshape(sum(log(1-kernel_O_use_on(attn,1,O,G(l,:) == 0)),4), 1,1);
+
+       
+    end
+    
+    % take a step moving log_pT towards log_like_T
+    % pT is a scalar, the prior prob that T is on
+    log_prior_task = Ge.odds_inc * log_like_T + [log(1-pT), log(pT)] ;
+    % return from log-probability to probability space in a relatively
+    % numerically stable way (avoiding exp(very_very_negative_number))
+    posT    = exp(log_prior_task-max(log_prior_task));
+    posT    = posT/sum(posT);
+    pT      = posT(2); % pT is a scalar that this task is on. Need to return pT
+end
+if any(isnan(pT)), error(['NaN value in posterior over T.. ' num2str(pT)]); end
+
+newT = randidx([1-pT, pT]) - 1; %%%% sample T. [p_task_off, p_task_on]. randidx returns 1 or 2, need to minus 1
+end
+
+
+
+function  kernel_O_use = get_kernel_O_use_dual(kernel_O_cardinal, kernel_O_oblique,kernel_O_uniform, T_cardinal, T_oblique)
+
+%%%%% By Shizhao Liu 11/20/2025. Get the kernel_O to use under
+%%%%% dual-task-switching mode, based on pre-defined kernel_O_cardinal,
+%%%%% kernel_O_oblique, and the samples of two task variable T.
+
+%%%%% This line of code is equivalent to:
+% % if T_cardinal == 1 & T_oblique == 0
+% %     % Just like cardinal
+% %     kernel_O_use = kernel_O_cardinal + kernel_O_uniform;
+% % elseif T_cardinal == 0 & T_oblique == 1
+% %     % Just like oblique
+% %     kernel_O_use = kernel_O_oblique + kernel_O_uniform;
+% % elseif T_cardinal == 0 & T_oblique == 0
+% %     % Uniform profile
+% %     kernel_O = kernel_O_uniform + kernel_O_uniform;
+% %     
+% % elseif T_cardinal == 1 & T_oblique == 1
+% %     % Sum of two kernels
+% %     kernel_O_use = kernel_O_cardinal + kernel_O_oblique;
+% % end
+kernel_O_use = kernel_O_cardinal * T_cardinal + kernel_O_oblique * T_oblique + ...
+            (1 - T_cardinal) * (1 - T_oblique) * kernel_O_uniform;
 end

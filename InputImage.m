@@ -113,6 +113,7 @@ switch fct
             for k=1:nr
                 im_signal = c(k,i,1) * auxV + c(k,i,2) * auxH;
                 Y(k,:,:)= squeeze(Y(k,:,:)) + im_signal;
+                %Y(k,:,:)= squeeze(Y(k,:,:)) .* normpdf(yyr,  0, 0.2).*normpdf(xxr,i-1,0.2)  + im_signal;
             end
         end
         Y=squeeze(Y);

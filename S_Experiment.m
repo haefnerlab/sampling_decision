@@ -30,9 +30,17 @@ create_stimulus_handle = @() create_trial_stimulus(regime, im_type, contrast, im
 % pre-allocate the return variables
 Signal = zeros(n_trials, n_neurons, n_frames);
 
+%%%%% By Shizhao Liu 12/04/2025. Pre-allocate orientation signal
+run_ori_energy = P.I.run_ori_energy;
+
+if run_ori_energy
+    n_ori_bin       = P.I.n_ori_bin;
+    n_frame_energy  = n_frames - n_zero_sig;
+    orientation_energy = zeros(n_trials, n_ori_bin,n_ori_bin);
+end
 %% loop over trials, parallelized over multiple cores if possible
 % (if not, parfor defaults to a backwards for loop)
-parfor i = 1:n_trials
+for i = 1:n_trials
     
     if mod(i,20) == 0
         disp(['Computing Repetition ' num2str(i) ' / ' num2str(n_trials)]);
@@ -42,8 +50,14 @@ parfor i = 1:n_trials
     
     % Perform a trial
     % (suppressing warning that P is broadcast.. it's unavoidable)
-    [aux_X{i}, aux_G{i}, aux_O{i}, aux_L{i}, aux_S{i}, aux_T{i}] = ...
-        Sampling_Gibbs_InPlace_Fast(P.G, P.S, P.I ,Y); %#ok<PFBNS>
+    switch P.G.switching_mode
+        case 'single' 
+            [aux_X{i}, aux_G{i}, aux_O{i}, aux_L{i}, aux_S{i}, aux_T{i}] = ...
+                Sampling_Gibbs_InPlace_Fast(P.G, P.S, P.I ,Y); %#ok<PFBNS>
+        case 'dual'
+             [aux_X{i}, aux_G{i}, aux_O{i}, aux_L{i}, aux_S{i}, aux_T{i}, aux_T_cardinal{i}, aux_T_oblique{i}] = ...
+                Sampling_Gibbs_InPlace_Fast(P.G, P.S, P.I ,Y); %#ok<PFBNS>
+    end
     
     % Signal at trial i, neuron j, frame k is mean convolution of the image
     % with the neuron's projective field
@@ -60,24 +74,41 @@ parfor i = 1:n_trials
             Signal(i,:) = tmp(:)';
         otherwise, error(regime);
     end
+
+    %%% also save orientation energy of images
+    if run_ori_energy
+        
+        for im = 1:n_frames
+            [orientation_bins_center, orientation_energy(i,:,im)] = get_ori_energy_model(squeeze(Y(im,:,:)), n_ori_bin);
+        end
+    end
+    
 end
 
 %% Copy results to output struct
 out.Signal = Signal;
+if run_ori_energy
+    out.oriEnergy = orientation_energy;
+    out.orientation_bins_center  = orientation_bins_center;
+end
 for i = n_trials:-1:1
     out.X(i,:,:)   = aux_X{i};
     out.G(i,:,:,:) = aux_G{i};
     out.O(i,:,:)   = aux_O{i};
     out.L(i,:,:)   = aux_L{i};
     out.T(i,:,:)   = aux_T{i};
+    if strcmp(P.G.switching_mode,'dual')
+        out.T_cardinal(i,:,:)   = aux_T_cardinal{i};
+        out.T_oblique(i,:,:)    = aux_T_oblique{i};
+    end
     out.S(i,:)     = aux_S{i};
+    
 end
 
 % Rename/alias variables for backwards compatibility with old analysis code
 out.Projection = P;
 out.InputImage = P.I;
 out.Sampling = P.S;
-
 out = BackwardsComp(out);
 
 end
@@ -127,6 +158,11 @@ out.Projection.nL = out.Projection.G.number_locations;
 out.Projection.nX = out.Projection.G.dimension_X;
 out.Projection.nG = out.Projection.G.dimension_G;
 out.Projection.pT = out.Projection.G.prior_task;
+
+if isfield(out.Projection.G, 'priot_task_cardinal')
+    out.Projection.pT_cardinal = out.Projection.G.prior_task_cardinal;
+    out.Projection.pT_oblique  = out.Projection.G.prior_task_oblique;
+end
 out.Projection.phi_x = out.Projection.G.phi_x;
 out.Projection.phi_g = out.Projection.G.phi_g;
 out.InputImage.dyn = out.Projection.I.stimulus_regime;
@@ -143,19 +179,19 @@ out.Projection.kappa_G = out.Projection.G.kappa_G;
 names = fieldnames(out.Projection.G);
 data = struct2cell(out.Projection.G);
 l = length(names);
-for i = 1:l;
+for i = 1:l
     out.Projection.(names{i}) = data{i};
 end
 names = fieldnames(out.Projection.S);
 data = struct2cell(out.Projection.S);
 l = length(names);
-for i = 1:l;
+for i = 1:l
     out.Projection.(names{i}) = data{i};
 end
 names = fieldnames(out.Projection.I);
 data = struct2cell(out.Projection.I);
 l = length(names);
-for i = 1:l;
+for i = 1:l
     out.Projection.(names{i}) = data{i};
 end
 end
